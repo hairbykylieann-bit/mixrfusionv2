@@ -29,6 +29,7 @@ const adjustStock = async (productId: string, delta: number) => {
   });
 };
 import { useSalonSettings, SalonSettings } from "@/hooks/useSalonSettings";
+import { useSubscription } from "@/hooks/useSubscription";
 import { calculateServiceCharge } from "@/lib/utils";
 import { useClients } from "@/hooks/useClients";
 import { useClientDetail } from "@/hooks/useClientDetail";
@@ -53,7 +54,7 @@ const createNewBowl = (index: number, defaultUnit: string = "g"): Bowl => ({
   name: `Bowl ${index}`,
   mixItems: [{ id: Date.now(), productType: "Color", product: "", amount: "", unit: defaultUnit }],
   developers: [{ id: Date.now() + 1, product: "", amount: "", unit: defaultUnit }],
-  notes: "",
+  processingTime: "",
   leftoverUnit: defaultUnit,
 });
 
@@ -259,7 +260,7 @@ export default function NewBowl() {
   const [existingSessionId, setExistingSessionId] = useState<string | null>(null);
   const [existingBowlCount, setExistingBowlCount] = useState(0);
   const [existingBowlDbIds, setExistingBowlDbIds] = useState<string[]>([]);
-  const [originalBowlSnapshots, setOriginalBowlSnapshots] = useState<Map<number, { dbBowlId: string; mixItems: { productId: string; amount: string; unit: string }[]; developers: { product: string; amount: string; unit: string }[]; notes: string }>>(new Map());
+  const [originalBowlSnapshots, setOriginalBowlSnapshots] = useState<Map<number, { dbBowlId: string; mixItems: { productId: string; amount: string; unit: string }[]; developers: { product: string; amount: string; unit: string }[]; processingTime: string }>>(new Map());
   const [deletedExistingBowlIds, setDeletedExistingBowlIds] = useState<string[]>([]);
   const [sessionSaved, setSessionSaved] = useState(false);
   const [sessionCanvas, setSessionCanvas] = useState<import("@/components/bowl/SessionCanvasModal").CanvasData | null>(null);
@@ -277,6 +278,7 @@ export default function NewBowl() {
   } | null>(null);
 
   const { settings } = useSalonSettings();
+  const { canWrite: subscriptionCanWrite } = useSubscription();
   const preferredUnit = settings?.preferred_display_unit || "oz";
   const { clients, isLoading: clientsLoading, createClient } = useClients();
   const { effectiveStaff, isLoading: staffLoading } = useEffectiveStaff();
@@ -396,9 +398,6 @@ export default function NewBowl() {
     }
 
     if (state?.formula) {
-      console.log("Loaded formula from navigation state:", state.formula);
-      console.log("Available color products:", colorProducts.length);
-      console.log("Available developer products:", developerProducts.length);
     }
     
     // Pre-fill bowls with formula data (only once and when products are loaded)
@@ -482,7 +481,6 @@ export default function NewBowl() {
         name: "Bowl 1",
         mixItems,
         developers: developersData,
-        notes: formula.notes || "",
         leftoverUnit: preferredUnit, // salon default (stylist can still override per bowl)
       }]);
       
@@ -542,7 +540,7 @@ export default function NewBowl() {
 
       const { data: allSessionBowls } = await supabase
         .from('session_bowls')
-        .select('id, name, developer_product_id, developer_amount, developer_unit, amount_mixed, amount_used, notes, bowl_preset_id, bowl_tare_weight, bowl_tare_unit, reweighed_amount, reweighed_unit, parent_bowl_id, remix_index')
+        .select('id, name, developer_product_id, developer_amount, developer_unit, amount_mixed, amount_used, notes, processing_time_minutes, bowl_preset_id, bowl_tare_weight, bowl_tare_unit, reweighed_amount, reweighed_unit, parent_bowl_id, remix_index')
         .eq('session_id', existingSessionId);
 
       if (!allSessionBowls?.length) return;
@@ -616,7 +614,9 @@ export default function NewBowl() {
           name: sb.name || `Bowl ${idx + 1}`,
           mixItems: mixItems.length > 0 ? mixItems : [{ id: Date.now(), productType: 'Color', product: '', amount: '', unit: preferredUnit }],
           developers,
-          notes: sb.notes || '',
+          processingTime: sb.processing_time_minutes != null
+            ? String(sb.processing_time_minutes)
+            : (sb.notes && /^\d+$/.test(sb.notes) ? sb.notes : ''),
           leftoverUnit: preferredUnit,
           bowlPresetId: sb.bowl_preset_id || null,
           bowlTareWeight: sb.bowl_tare_weight != null ? Number(sb.bowl_tare_weight) : null,
@@ -632,13 +632,13 @@ export default function NewBowl() {
       const dbIds = sessionBowls.map(sb => sb.id);
       setExistingBowlDbIds(dbIds);
       
-      const snapshots = new Map<number, { dbBowlId: string; mixItems: { productId: string; amount: string; unit: string }[]; developers: { product: string; amount: string; unit: string }[]; notes: string }>();
+      const snapshots = new Map<number, { dbBowlId: string; mixItems: { productId: string; amount: string; unit: string }[]; developers: { product: string; amount: string; unit: string }[]; processingTime: string }>();
       loadedBowls.forEach((bowl, idx) => {
         snapshots.set(bowl.id, {
           dbBowlId: dbIds[idx],
           mixItems: bowl.mixItems.map(item => ({ productId: item.product, amount: item.amount, unit: item.unit })),
           developers: bowl.developers.map(dev => ({ product: dev.product, amount: dev.amount, unit: dev.unit })),
-          notes: bowl.notes,
+          processingTime: bowl.processingTime || '',
         });
       });
       setOriginalBowlSnapshots(snapshots);
@@ -713,7 +713,7 @@ export default function NewBowl() {
       name,
       mixItems,
       developers,
-      notes: '',
+      processingTime: '',
       leftoverUnit: fallbackUnit,
     };
   }, [colorProducts, developerProducts]);
@@ -737,7 +737,7 @@ export default function NewBowl() {
           b.name || `Bowl ${idx + 1}`,
           now + idx * 1000,
         );
-        return { ...built, notes: record.notes || '' };
+        return built; // (record.notes is session-level; notes now live in the head sheet)
       });
     } else {
       const built = buildBowlFromComponents(
@@ -747,7 +747,7 @@ export default function NewBowl() {
         'Bowl 1',
         now,
       );
-      newBowls = [{ ...built, notes: record.notes || '' }];
+      newBowls = [built];
     }
 
     // Keep the stylist's service pick if they made one, otherwise inherit from history
@@ -829,7 +829,7 @@ export default function NewBowl() {
       id: Date.now() + 9999,
       mixItems: seedMixItems,
       developers: seedDevs,
-      notes: bowl.notes || "",
+      processingTime: bowl.processingTime || "",
     };
     const updated: Bowl = { ...bowl, remixes: [...(bowl.remixes ?? []), newRemix] };
     setBowls(bowls.map((b, i) => (i === index ? updated : b)));
@@ -976,12 +976,10 @@ export default function NewBowl() {
 
   // Handle Mira voice parsing result
   const handleMiraResult = useCallback((result: MiraParseResult) => {
-    console.log("[Mira] Processing result:", result);
 
     // Set client if matched
     if (result.clientId) {
       setSelectedClient(result.clientId);
-      console.log("[Mira] Client set by ID:", result.clientId);
     } else if (result.clientName) {
       const clientNameLower = result.clientName.toLowerCase();
       const matchedClient = clients?.find(
@@ -990,7 +988,6 @@ export default function NewBowl() {
       );
       if (matchedClient) {
         setSelectedClient(matchedClient.id);
-        console.log("[Mira] Client matched by name:", matchedClient.name);
       }
     }
 
@@ -1005,7 +1002,6 @@ export default function NewBowl() {
             item.productId
           );
           
-          console.log(`[Mira] Product matching: "${item.productName}" -> ${matchedProduct?.name || 'NOT FOUND'}`);
 
           return {
             id: Date.now() + itemIdx,
@@ -1040,7 +1036,6 @@ export default function NewBowl() {
               dev.brandHint
             );
             
-            console.log(`[Mira] Developer matching: "${dev.productName}" (brandHint: ${dev.brandHint || 'none'}, preferred: ${preferredDevLine ? `${preferredDevLine.brand} ${preferredDevLine.line}` : 'none'}) -> ${matchedDev?.name || 'NOT FOUND'}`);
 
             const unitValue = dev.unit || preferredUnit;
             return {
@@ -1057,7 +1052,7 @@ export default function NewBowl() {
           name: parsedBowl.name || `Bowl ${idx + 1}`,
           mixItems: mixItems.length > 0 ? mixItems : [{ id: Date.now(), productType: "Color", product: "", amount: "", unit: preferredUnit as "g" | "oz" | "ml" }],
           developers: developersData,
-          notes: parsedBowl.notes || "",
+          processingTime: parsedBowl.notes && /^\d+$/.test(parsedBowl.notes) ? parsedBowl.notes : "",
           leftoverUnit: preferredUnit as "g" | "oz" | "ml",
         };
       });
@@ -1097,7 +1092,7 @@ export default function NewBowl() {
     }
     
     // Compare notes
-    if (bowl.notes !== snapshot.notes) return true;
+    if ((bowl.processingTime || '') !== snapshot.processingTime) return true;
 
     // Any remix presence or change counts as a modification — they are
     // persisted via a "wipe and re-insert" pass keyed off the parent bowl.
@@ -1133,6 +1128,11 @@ export default function NewBowl() {
     
     if (!hasNewProducts && !hasModifiedExisting && !hasDeletedExisting) {
       toast.error("Please add at least one product or make changes to save");
+      return;
+    }
+
+    if (!subscriptionCanWrite) {
+      toast.error("Your subscription is paused — new sessions can't be saved until billing is fixed in Settings.");
       return;
     }
 
@@ -1418,7 +1418,8 @@ export default function NewBowl() {
               developer_unit: firstDev?.unit || 'g',
               amount_mixed: bowlCalc.amountMixed,
               amount_used: bowlCalc.amountUsed,
-              notes: bowl.notes || null,
+              notes: null, // free-text notes live in the session head sheet now
+              processing_time_minutes: bowl.processingTime ? parseInt(bowl.processingTime, 10) : null,
               bowl_preset_id: bowl.bowlPresetId || null,
               bowl_tare_weight: bowl.bowlTareWeight ?? null,
               bowl_tare_unit: bowl.bowlTareUnit || null,
@@ -1503,7 +1504,7 @@ export default function NewBowl() {
             total_amount_mixed: totalMixed,
             total_amount_used: totalUsed,
             total_cost: 0,
-            notes: newBowls.map(b => b.notes).filter(Boolean).join('\n---\n') || null,
+            notes: sessionCanvas?.notes?.trim() || null, // ONE notes home: the head sheet
             tenant_id: tenantId,
             service_id: selectedService?.id || null,
             canvas_data: sessionCanvas as any,
@@ -1531,7 +1532,8 @@ export default function NewBowl() {
             developer_unit: firstDev?.unit || 'g',
             amount_mixed: amountMixed,
             amount_used: amountUsed,
-            notes: bowl.notes || null,
+            notes: null, // free-text notes live in the session head sheet now
+            processing_time_minutes: bowl.processingTime ? parseInt(bowl.processingTime, 10) : null,
             tenant_id: tenantId,
             bowl_preset_id: bowl.bowlPresetId || null,
             bowl_tare_weight: bowl.bowlTareWeight ?? null,
@@ -1686,7 +1688,7 @@ export default function NewBowl() {
             total_amount_mixed: totalMixed,
             total_amount_used: totalUsed,
             total_cost: Math.round(totalSessionCost * 100) / 100,
-            notes: bowls.filter(b => b.notes).map(b => b.notes).join('\n---\n') || null,
+            notes: sessionCanvas?.notes?.trim() || null, // ONE notes home: the head sheet
             canvas_data: sessionCanvas as any,
             canvas_preview_url: sessionCanvasPreviewUrl,
           } as any)

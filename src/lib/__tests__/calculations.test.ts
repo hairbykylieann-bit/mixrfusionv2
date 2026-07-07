@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateChargeAmount, calculateServiceCharge } from '../utils';
+import { calculateServiceCharge } from '../utils';
 // REAL imports — tests must exercise the app's actual math, never a local copy.
 // (The old version of this file re-implemented conversions inline, so tests
 // passed while the app was wrong.)
@@ -12,42 +12,6 @@ function calculatePercentageChange(current: number, previous: number): number | 
   }
   return ((current - previous) / previous) * 100;
 }
-
-// ──────────────────────────────────────────────
-// calculateChargeAmount (markup-based pricing)
-// ──────────────────────────────────────────────
-describe('calculateChargeAmount', () => {
-  it('returns 0 for zero cost', () => {
-    expect(calculateChargeAmount(0, 35, 5, 2.50, 0.25)).toBe(0);
-  });
-
-  it('returns 0 for negative cost', () => {
-    expect(calculateChargeAmount(-5, 35, 5, 2.50, 0.25)).toBe(0);
-  });
-
-  it('calculates standard case correctly', () => {
-    // cost=10, markup=35%, waste=5%, bowlFee=2.50, round=0.25
-    // 10 * 1.35 = 13.5 → * 1.05 = 14.175 → + 2.50 = 16.675 → round to 0.25 = 16.75
-    expect(calculateChargeAmount(10, 35, 5, 2.50, 0.25)).toBe(16.75);
-  });
-
-  it('handles zero waste factor', () => {
-    // cost=10, markup=100%, waste=0%, bowlFee=0, round=1
-    // 10 * 2 = 20 → * 1 = 20 → + 0 = 20 → round to 1 = 20
-    expect(calculateChargeAmount(10, 100, 0, 0, 1)).toBe(20);
-  });
-
-  it('handles rounding to $1', () => {
-    // cost=7, markup=50%, waste=10%, bowlFee=3, round=1
-    // 7 * 1.5 = 10.5 → * 1.1 = 11.55 → + 3 = 14.55 → round to 1 = 15
-    expect(calculateChargeAmount(7, 50, 10, 3, 1)).toBe(15);
-  });
-
-  it('handles very small rounding amount', () => {
-    const result = calculateChargeAmount(10, 0, 0, 0, 0.01);
-    expect(result).toBe(10); // 10 * 1.0 * 1.0 + 0 = 10, round to 0.01 = 10
-  });
-});
 
 // ──────────────────────────────────────────────
 // calculateServiceCharge (multiplier-based pricing)

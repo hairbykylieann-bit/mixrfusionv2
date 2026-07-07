@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { pin, tenant_id } = await req.json();
+    const { pin, tenant_id, staff_id } = await req.json();
 
     if (!pin || typeof pin !== 'string' || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
       return new Response(
@@ -35,6 +35,28 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ── Rate limiting: 5 failed attempts per salon in 10 min → lockout ──
+    const windowStart = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { count: recentFailures } = await supabase
+      .from('pin_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenant_id)
+      .eq('success', false)
+      .gte('created_at', windowStart);
+
+    if ((recentFailures ?? 0) >= 5) {
+      console.log(`PIN lockout active for tenant ${tenant_id}`);
+      return new Response(
+        JSON.stringify({ error: 'Too many wrong PINs. Wait a few minutes and try again.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Opportunistic cleanup of old attempt rows (fire and forget)
+    supabase.from('pin_attempts').delete()
+      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .then(() => {});
 
     // Get all active staff members with PIN hashes for this tenant only
     const { data: staffMembers, error: staffError } = await supabase
@@ -69,6 +91,11 @@ serve(async (req) => {
       .eq('is_active', true)
       .not('pin_hash', 'is', null);
 
+    // When the kiosk knows who's trying to unlock, only their PIN counts.
+    const candidates = (staffMembers || []).filter(
+      (s: { id: string }) => !staff_id || s.id === staff_id,
+    );
+
     if (staffError) {
       console.error('Error fetching staff:', staffError);
       return new Response(
@@ -85,7 +112,7 @@ serve(async (req) => {
     }
 
     // Check PIN against each staff member's hash
-    for (const staff of staffMembers) {
+    for (const staff of candidates) {
       if (staff.pin_hash) {
         try {
           const isMatch = compareSync(pin, staff.pin_hash);
@@ -94,6 +121,10 @@ serve(async (req) => {
             const { pin_hash, ...staffData } = staff;
             
             console.log(`PIN verified for staff: ${staff.name} (${staff.id})`);
+
+            await supabase.from('pin_attempts').insert({ tenant_id, success: true });
+            await supabase.from('pin_attempts').delete()
+              .eq('tenant_id', tenant_id).eq('success', false);
             
             return new Response(
               JSON.stringify({ 
@@ -111,7 +142,8 @@ serve(async (req) => {
       }
     }
 
-    // No match found
+    // No match found — record the failure for rate limiting
+    await supabase.from('pin_attempts').insert({ tenant_id, success: false });
     console.log('PIN verification failed - no match');
     return new Response(
       JSON.stringify({ error: 'Invalid PIN' }),

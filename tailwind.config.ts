@@ -14,10 +14,16 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Hind', 'system-ui', 'sans-serif'],
-        display: ['"Archivo Black"', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Antonio', 'system-ui', 'sans-serif'],
       },
       colors: {
+        obsidian: "#050505",
+        silver: "#D8D8D8",
+        champagne: {
+          DEFAULT: "hsl(var(--champagne))",
+          foreground: "hsl(var(--champagne-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

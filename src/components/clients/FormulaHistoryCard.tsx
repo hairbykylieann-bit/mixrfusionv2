@@ -344,6 +344,23 @@ export function FormulaHistoryCard({ record, index, onUseAgain, onUseOptimized, 
             )
           )}
 
+          {record.canvasPreviewUrl && (
+            <a
+              href={record.canvasPreviewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-block"
+              title="Open head sheet sketch"
+            >
+              <img
+                src={record.canvasPreviewUrl}
+                alt="Head sheet sketch"
+                loading="lazy"
+                className="h-20 rounded-md border border-border object-cover hover:opacity-80 transition-opacity"
+              />
+            </a>
+          )}
+
           {hasReweigh && (
             <p className={`text-xs mt-2 flex items-center gap-1.5 ${hasWaste ? 'text-amber-500' : 'text-emerald-500'}`}>
               <Scale className="w-3 h-3" />

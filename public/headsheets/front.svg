@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536" fill="none" stroke="#8a8f98" stroke-width="6" stroke-linecap="round">
+  <!-- shoulders -->
+  <path d="M96 1440 C 210 1170 330 1105 424 1078"/>
+  <path d="M928 1440 C 814 1170 694 1105 600 1078"/>
+  <!-- neck -->
+  <path d="M424 1078 C 436 1000 440 946 436 892"/>
+  <path d="M600 1078 C 588 1000 584 946 588 892"/>
+  <!-- head -->
+  <path d="M512 168 C 340 168 216 320 216 552 C 216 700 264 820 330 890 C 390 952 448 976 512 976 C 576 976 634 952 694 890 C 760 820 808 700 808 552 C 808 320 684 168 512 168 Z"/>
+  <!-- ears -->
+  <path d="M216 560 C 176 536 170 640 220 668"/>
+  <path d="M808 560 C 848 536 854 640 804 668"/>
+  <!-- hairline -->
+  <path d="M276 470 C 350 356 674 356 748 470" stroke-dasharray="14 10"/>
+  <!-- center part -->
+  <path d="M512 176 L 512 372" stroke-dasharray="14 10"/>
+  <!-- subtle face hints -->
+  <path d="M370 590 C 396 574 434 574 458 590" stroke-width="5"/>
+  <path d="M566 590 C 590 574 628 574 654 590" stroke-width="5"/>
+  <path d="M496 700 C 504 712 520 712 528 700" stroke-width="5"/>
+  <path d="M462 812 C 494 830 530 830 562 812" stroke-width="5"/>
+</svg>

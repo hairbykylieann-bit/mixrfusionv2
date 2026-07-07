@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useStaff } from "@/hooks/useStaff";
 import { useSalonSettings } from "@/hooks/useSalonSettings";
+import { useSubscription } from "@/hooks/useSubscription";
 import { toast } from "sonner";
 import { Shield, DollarSign, KeyRound } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -48,7 +49,7 @@ const formSchema = z.object({
   custom_markup_percent: z.coerce.number().min(1).default(4),
   has_custom_bowl_fee: z.boolean().default(false),
   custom_bowl_fee: z.coerce.number().min(0).default(0),
-  pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits"),
+  pin: z.string().refine((v) => v === "" || /^\d{4}$/.test(v), "PIN must be 4 digits").optional().default(""),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -95,7 +96,16 @@ export function AddStaffDialog({ open, onOpenChange, isOwnerViewing = false }: A
     }
   }, [open, form]);
 
+  const subscription = useSubscription();
+
   const onSubmit = async (values: FormValues) => {
+    if (!subscription.canAddStaff && subscription.maxStaff !== null) {
+      toast.error(
+        `Your ${subscription.planName ?? "current"} plan covers ${subscription.maxStaff} team member${subscription.maxStaff === 1 ? "" : "s"} and you have ${subscription.activeStaffCount}. Upgrade in Settings → Subscription to add more.`,
+        { duration: 6000 },
+      );
+      return;
+    }
     setIsSubmitting(true);
     try {
       const result = await createStaff.mutateAsync({
@@ -110,7 +120,7 @@ export function AddStaffDialog({ open, onOpenChange, isOwnerViewing = false }: A
         ...permissions,
       });
 
-      if (result?.id) {
+      if (result?.id && values.pin) {
         const { error: pinError } = await supabase.functions.invoke('manage-pin', {
           body: {
             staff_id: result.id,
@@ -229,7 +239,7 @@ export function AddStaffDialog({ open, onOpenChange, isOwnerViewing = false }: A
                 <FormItem>
                   <div className="flex items-center gap-2">
                     <KeyRound className="w-4 h-4 text-muted-foreground" />
-                    <FormLabel>Kiosk PIN *</FormLabel>
+                    <FormLabel>Kiosk PIN (optional)</FormLabel>
                   </div>
                   <FormControl>
                     <InputOTP
@@ -246,7 +256,7 @@ export function AddStaffDialog({ open, onOpenChange, isOwnerViewing = false }: A
                     </InputOTP>
                   </FormControl>
                   <FormDescription>
-                    4-digit PIN this staff member will use to sign in on the kiosk.
+                    Leave blank (recommended) — they will choose their own PIN the first time they tap their name on the kiosk. Only they will know it.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

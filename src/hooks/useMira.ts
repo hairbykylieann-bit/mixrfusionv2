@@ -72,7 +72,6 @@ export function useMira({ products, clients, preferredUnit, onResult }: UseMiraO
     },
     onCommittedTranscript: (data) => {
       if (!isActiveRef.current) return;
-      console.log("[Mira] Committed segment:", data.text);
       committedSegmentsRef.current.push(data.text);
       setPartialText(null);
 
@@ -105,8 +104,6 @@ export function useMira({ products, clients, preferredUnit, onResult }: UseMiraO
     setStatus("parsing");
     scribe.disconnect();
 
-    console.log("[Mira] Full transcription:", fullText);
-    console.log("[Mira] Starting AI parsing...");
 
     try {
       const { data: parseData, error: parseError } = await supabase.functions.invoke(
@@ -136,7 +133,6 @@ export function useMira({ products, clients, preferredUnit, onResult }: UseMiraO
         throw new Error(parseError.message || "Parsing failed");
       }
 
-      console.log("[Mira] Parse result:", parseData);
 
       if (!parseData.success) {
         throw new Error(parseData.error || "Parsing failed");
@@ -179,7 +175,6 @@ export function useMira({ products, clients, preferredUnit, onResult }: UseMiraO
       setParseResult(null);
       committedSegmentsRef.current = [];
 
-      console.log("[Mira] Getting scribe token...");
       setStatus("transcribing"); // brief loading state while getting token
 
       const tokenResponse = await fetch(
@@ -206,7 +201,6 @@ export function useMira({ products, clients, preferredUnit, onResult }: UseMiraO
         throw new Error("No token received");
       }
 
-      console.log("[Mira] Connecting to realtime scribe...");
       isActiveRef.current = true;
 
       await scribe.connect({
@@ -219,7 +213,6 @@ export function useMira({ products, clients, preferredUnit, onResult }: UseMiraO
       });
 
       setStatus("recording");
-      console.log("[Mira] Realtime transcription active");
     } catch (err) {
       console.error("[Mira] Failed to start recording:", err);
       const msg = err instanceof Error ? err.message : "Failed to start recording";
@@ -230,7 +223,6 @@ export function useMira({ products, clients, preferredUnit, onResult }: UseMiraO
   }, [scribe]);
 
   const stopRecording = useCallback(() => {
-    console.log("[Mira] Manual stop requested");
     if (parseTimeoutRef.current) {
       clearTimeout(parseTimeoutRef.current);
     }

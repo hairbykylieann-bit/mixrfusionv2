@@ -124,7 +124,7 @@ export function QuickStockAdjustment({
           <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
             <div>
               <p className="text-xs text-muted-foreground">Current Stock</p>
-              <p className="text-2xl font-semibold">{product.stock}</p>
+              <p className="text-2xl font-semibold">{parseFloat(Number(product.stock).toFixed(2))}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-muted-foreground">New Stock</p>
@@ -132,7 +132,7 @@ export function QuickStockAdjustment({
                 quantity > 0 ? "text-success" : 
                 quantity < 0 ? "text-destructive" : ""
               }`}>
-                {newStock}
+                {parseFloat(Number(newStock).toFixed(2))}
               </p>
             </div>
           </div>

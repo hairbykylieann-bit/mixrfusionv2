@@ -15,6 +15,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useMiraContext } from "@/contexts/MiraContext";
 import { useKioskSafe } from "@/contexts/KioskContext";
 import { useSalonSettings } from "@/hooks/useSalonSettings";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useScrollY } from "@/hooks/useParallax";
 
 export function Header() {
@@ -33,7 +34,7 @@ export function Header() {
   const logout = kioskContext?.logout;
 
   const salonName = settings?.salon_name || "MixR Fusion";
-  const salonLogo = settings?.salon_logo_url;
+  const { state: billingState, graceEndsAt } = useSubscription();
 
   const handleSignOut = async () => {
     await signOut();
@@ -53,6 +54,14 @@ export function Header() {
     .toUpperCase();
 
   return (
+    <>
+    {(billingState === "grace" || billingState === "readonly") && (
+      <div className="w-full bg-warning/15 border-b border-warning/40 px-4 py-2 text-center text-sm text-foreground">
+        {billingState === "grace"
+          ? `Payment issue — update your card in Settings before ${graceEndsAt?.toLocaleDateString() ?? "soon"} to keep logging sessions.`
+          : "Subscription paused — everything is viewable, but new work can't be logged until billing is fixed in Settings."}
+      </div>
+    )}
     <motion.header
       className={`sticky top-0 z-50 w-full glass transition-[height,border-color] duration-300 ${
         tightened ? "border-b border-foreground/15" : "border-b border-border"
@@ -73,18 +82,12 @@ export function Header() {
               </Link>
             )}
             <Link to="/" className="flex items-center gap-3">
-              {salonLogo ? (
-                <div className="w-9 h-9 overflow-hidden" style={{ borderRadius: "var(--radius)" }}>
-                  <img src={salonLogo} alt={salonName} className="w-full h-full object-contain" />
-                </div>
-              ) : (
-                <div
-                  className="w-9 h-9 bg-foreground flex items-center justify-center"
-                  style={{ borderRadius: "var(--radius)" }}
-                >
-                  <span className="text-background font-display text-sm">M</span>
-                </div>
-              )}
+              <div
+                className="w-9 h-9 bg-obsidian flex items-center justify-center"
+                style={{ borderRadius: "var(--radius)" }}
+              >
+                <span className="text-metallic font-display font-bold text-lg leading-none">R</span>
+              </div>
               <span className="font-display text-base sm:text-lg uppercase tracking-tight text-foreground">
                 {salonName}
               </span>
@@ -159,5 +162,6 @@ export function Header() {
         </div>
       </div>
     </motion.header>
+    </>
   );
 }

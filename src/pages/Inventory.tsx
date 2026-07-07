@@ -36,6 +36,8 @@ import { ProductImportCard } from "@/components/inventory/ProductImportCard";
 import { ProductCatalogBrowser } from "@/components/inventory/ProductCatalogBrowser";
 import { InventoryFilters as InventoryFiltersDropdown, StatusFilter, SortBy } from "@/components/inventory/InventoryFilters";
 import { InventoryValueCard } from "@/components/inventory/InventoryValueCard";
+import { SmartStockCard } from "@/components/inventory/SmartStockCard";
+import { useSmartStock } from "@/hooks/useSmartStock";
 import { QuickStockAdjustment, AdjustmentReason } from "@/components/inventory/QuickStockAdjustment";
 import { StockHistorySheet } from "@/components/inventory/StockHistorySheet";
 import { StockAdjustmentsReport } from "@/components/inventory/StockAdjustmentsReport";
@@ -257,6 +259,7 @@ export default function Inventory() {
   
   const canManageProducts = effectiveStaff?.permissions.can_manage_products ?? false;
   const canViewCosts = effectiveStaff?.permissions.can_view_product_costs ?? false;
+  const { suggestions: smartSuggestions, applySuggestion } = useSmartStock(products);
   const isOwner = effectiveStaff?.role === "owner";
   const canAdjustStock = canManageProducts || effectiveStaff?.role === "manager" || isOwner;
 
@@ -628,6 +631,19 @@ export default function Inventory() {
               />
             )}
 
+            {/* Smart Stock — usage-based reorder suggestions */}
+            {!showInactive && products.length > 0 && (
+              <SmartStockCard
+                products={products}
+                suggestions={smartSuggestions}
+                canManage={canManageProducts}
+                isApplying={applySuggestion.isPending}
+                onApply={(productId, reorderLevel, targetStock) =>
+                  applySuggestion.mutate({ productId, reorderLevel, targetStock })
+                }
+              />
+            )}
+
             {/* Breadcrumb for active filters */}
             {hasActiveHierarchicalFilters && (
               <InventoryBreadcrumb
@@ -846,6 +862,7 @@ export default function Inventory() {
       />
 
       <ReorderReportSheet
+        suggestions={smartSuggestions}
         open={isReorderSheetOpen}
         onOpenChange={setIsReorderSheetOpen}
         products={valueCardProducts}

@@ -349,7 +349,6 @@ export function useGlobalMira() {
           if (!hasDetectedSpeechRef.current) {
             hasDetectedSpeechRef.current = true;
             speechStartRef.current = now;
-            console.log("[Global Mira] Speech detected");
           }
           silenceStartRef.current = null;
           setSilenceCountdown(null);
@@ -360,7 +359,6 @@ export function useGlobalMira() {
           if (speechDuration >= MIN_SPEECH_DURATION) {
             if (!silenceStartRef.current) {
               silenceStartRef.current = now;
-              console.log("[Global Mira] Silence detected, starting countdown");
             }
 
             const silenceDuration = now - silenceStartRef.current;
@@ -371,7 +369,6 @@ export function useGlobalMira() {
             }
 
             if (silenceDuration >= SILENCE_TIMEOUT) {
-              console.log("[Global Mira] Silence timeout reached, auto-stopping");
               stopRecording();
               return;
             }

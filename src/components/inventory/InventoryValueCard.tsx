@@ -60,7 +60,7 @@ export function InventoryValueCard({ products, isInactiveView = false, contextLa
     : products
         .filter(p => p.stock <= p.reorderLevel)
         .reduce((sum, p) => {
-          const unitsNeeded = Math.max(0, p.targetStock - p.stock);
+          const unitsNeeded = Math.max(0, Math.ceil(p.targetStock - p.stock)); // whole containers
           return sum + (unitsNeeded * p.cost);
         }, 0);
 
@@ -176,7 +176,7 @@ export function InventoryValueCard({ products, isInactiveView = false, contextLa
                                 {product.shade || product.name}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {product.brand} • {product.stock} units
+                                {product.brand} • {parseFloat(Number(product.stock).toFixed(2))} units
                               </p>
                             </div>
                           </div>

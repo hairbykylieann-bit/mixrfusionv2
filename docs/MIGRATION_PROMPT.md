@@ -1,3 +1,10 @@
+> ⚠️ **STALE — DO NOT TRUST (marked 2026-07-06).**
+> This document is from the Lovable era and does NOT reflect the current app.
+> The live schema is defined by `supabase/migrations/` (the later migrations
+> patched triggers, changed column types, and added permissions).
+> Current architecture and decisions live in Kylie's Obsidian vault
+> (AI Brain Operating Manual + 01 Build notes).
+
 # MixR Fusion - Complete Build Prompt for Lovable
 
 > **IMPORTANT:** Before using this prompt in a new Lovable project, you must:

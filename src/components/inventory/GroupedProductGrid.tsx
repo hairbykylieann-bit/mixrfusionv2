@@ -108,7 +108,7 @@ function CompactProductCard({
             product.status === "low" && "text-warning",
             product.status === "in-stock" && "text-success"
           )}>
-            {product.stock}
+            {parseFloat(Number(product.stock).toFixed(2))}
           </span>
         </div>
         
@@ -274,7 +274,7 @@ function TypeSection({
                   product.status === "low" && "text-warning",
                   product.status === "in-stock" && "text-success"
                 )}>
-                  {product.stock}
+                  {parseFloat(Number(product.stock).toFixed(2))}
                 </span>
               </div>
             </div>

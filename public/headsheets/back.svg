@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536" fill="none" stroke="#8a8f98" stroke-width="6" stroke-linecap="round">
+  <!-- shoulders -->
+  <path d="M96 1440 C 210 1170 330 1105 424 1078"/>
+  <path d="M928 1440 C 814 1170 694 1105 600 1078"/>
+  <!-- neck -->
+  <path d="M424 1078 C 436 1000 440 946 436 892"/>
+  <path d="M600 1078 C 588 1000 584 946 588 892"/>
+  <!-- head -->
+  <path d="M512 168 C 340 168 216 320 216 552 C 216 700 264 820 330 890 C 390 952 448 976 512 976 C 576 976 634 952 694 890 C 760 820 808 700 808 552 C 808 320 684 168 512 168 Z"/>
+  <!-- ears (peeking) -->
+  <path d="M216 560 C 176 536 170 640 220 668"/>
+  <path d="M808 560 C 848 536 854 640 804 668"/>
+  <!-- crown + nape guides -->
+  <circle cx="512" cy="430" r="10" fill="#8a8f98" stroke="none"/>
+  <path d="M512 440 L 512 940" stroke-dasharray="14 10"/>
+  <path d="M330 890 C 390 848 634 848 694 890" stroke-dasharray="14 10"/>
+  <!-- radial sections from crown -->
+  <path d="M512 430 C 420 520 360 640 336 760" stroke-dasharray="14 10"/>
+  <path d="M512 430 C 604 520 664 640 688 760" stroke-dasharray="14 10"/>
+</svg>

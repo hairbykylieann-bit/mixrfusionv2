@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Product } from "@/hooks/useProducts";
+import type { StockSuggestion } from "@/lib/reports/usageVelocity";
+import { describeVelocity } from "@/lib/reports/usageVelocity";
 
 interface ReorderItem {
   product: Product;
@@ -31,11 +33,12 @@ interface ReorderReportSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   products: Product[];
+  suggestions?: Map<string, StockSuggestion>;
   isOwner?: boolean;
   contextLabel?: string | null;
 }
 
-export function ReorderReportSheet({ open, onOpenChange, products, isOwner = false, contextLabel }: ReorderReportSheetProps) {
+export function ReorderReportSheet({ open, onOpenChange, products, isOwner = false, contextLabel , suggestions }: ReorderReportSheetProps) {
   const lowStockProducts = useMemo(
     () => products.filter(p => p.status === "low" || p.status === "out"),
     [products]
@@ -45,7 +48,12 @@ export function ReorderReportSheet({ open, onOpenChange, products, isOwner = fal
     lowStockProducts.map(product => ({
       product,
       selected: true,
-      orderQty: Math.max(product.reorderLevel - product.stock + 2, 1),
+      // Order back up to the salon's target stock (whole containers).
+      // Falls back to clearing the reorder threshold if no target is set.
+      orderQty: Math.max(
+        Math.ceil((product.targetStock || product.reorderLevel + 2) - product.stock),
+        1
+      ),
     }))
   );
 
@@ -57,7 +65,12 @@ export function ReorderReportSheet({ open, onOpenChange, products, isOwner = fal
         return existing || {
           product,
           selected: true,
-          orderQty: Math.max(product.reorderLevel - product.stock + 2, 1),
+          // Order back up to the salon's target stock (whole containers).
+      // Falls back to clearing the reorder threshold if no target is set.
+      orderQty: Math.max(
+        Math.ceil((product.targetStock || product.reorderLevel + 2) - product.stock),
+        1
+      ),
         };
       })
     );
@@ -188,11 +201,16 @@ export function ReorderReportSheet({ open, onOpenChange, products, isOwner = fal
                             <p className="font-medium">
                               {item.product.shade ? `${item.product.shade} - ` : ""}{item.product.name}
                             </p>
+                            {suggestions?.get(item.product.id) && (
+                              <p className="text-xs text-muted-foreground">
+                                {describeVelocity(suggestions.get(item.product.id)!)}
+                              </p>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <span className={item.product.stock === 0 ? "text-destructive font-medium" : "text-warning font-medium"}>
-                            {item.product.stock}
+                            {parseFloat(Number(item.product.stock).toFixed(2))}
                           </span>
                         </TableCell>
                         <TableCell>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1536" viewBox="0 0 1024 1536" fill="none" stroke="#8a8f98" stroke-width="6" stroke-linecap="round">
+  <!-- head from above (nose at top) -->
+  <ellipse cx="512" cy="768" rx="330" ry="430"/>
+  <!-- nose indicator -->
+  <path d="M482 348 C 494 322 530 322 542 348"/>
+  <!-- ears -->
+  <path d="M182 700 C 148 680 144 780 186 800"/>
+  <path d="M842 700 C 876 680 880 780 838 800"/>
+  <!-- crown -->
+  <circle cx="512" cy="880" r="10" fill="#8a8f98" stroke="none"/>
+  <!-- section guides: center part + radials -->
+  <path d="M512 338 L 512 1198" stroke-dasharray="14 10"/>
+  <path d="M512 880 C 400 820 300 760 216 690" stroke-dasharray="14 10"/>
+  <path d="M512 880 C 624 820 724 760 808 690" stroke-dasharray="14 10"/>
+  <path d="M512 880 C 420 960 340 1040 276 1110" stroke-dasharray="14 10"/>
+  <path d="M512 880 C 604 960 684 1040 748 1110" stroke-dasharray="14 10"/>
+</svg>

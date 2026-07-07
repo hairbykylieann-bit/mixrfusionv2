@@ -22,6 +22,7 @@ import Staff from "./pages/Staff";
 import StaffReport from "./pages/StaffReport";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import ResetPassword from "@/pages/ResetPassword";
 import Onboarding from "./pages/Onboarding";
 import Join from "./pages/Join";
 import NotFound from "./pages/NotFound";
@@ -53,6 +54,8 @@ const App = () => (
                   <Routes>
                     {/* Public routes */}
                     <Route path="/auth" element={<Auth />} />
+                    <Route path="/welcome" element={<Auth />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/join/:shortCode" element={<Join />} />
                     
                     {/* Onboarding route (protected but special) */}

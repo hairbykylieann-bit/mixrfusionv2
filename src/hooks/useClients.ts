@@ -47,6 +47,7 @@ export interface FormulaRecord {
   serviceId?: string;
   bowls?: BowlRecord[];
   serviceName?: string;
+  canvasPreviewUrl?: string | null;
 }
 
 export interface Client {

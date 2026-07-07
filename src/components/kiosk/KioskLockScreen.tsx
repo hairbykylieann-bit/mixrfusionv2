@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useKioskSafe } from "@/contexts/KioskContext";
@@ -12,12 +13,14 @@ export function KioskLockScreen() {
   const kioskContext = useKioskSafe();
   const { settings } = useSalonSettings();
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
+  // First-time PIN setup: 'choose' → 'confirm' (null = normal unlock)
+  const [setupStep, setSetupStep] = useState<null | "choose" | "confirm">(null);
+  const [setupFirstPin, setSetupFirstPin] = useState("");
   const [pin, setPin] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const salonName = settings?.salon_name || "MixR Fusion";
-  const salonLogo = settings?.salon_logo_url;
 
   const { availableStaff, isLoadingStaff, verifyPin, activeStaff } = kioskContext ?? {};
 
@@ -36,6 +39,13 @@ export function KioskLockScreen() {
   }, [kioskContext?.isLocked, kioskContext?.activeStaff]);
 
   // Don't render if context not available, not in kiosk mode, or not locked
+  // Never cover public pages (login/signup/reset/join) — kiosk lock is an
+  // inside-the-app concept, and a stale localStorage kiosk flag on a signed-out
+  // device would otherwise sit over the signup form and block typing.
+  const publicPaths = ["/auth", "/reset-password", "/join"];
+  if (publicPaths.some((p) => window.location.pathname.startsWith(p))) {
+    return null;
+  }
   if (!kioskContext || !kioskContext.isKioskMode || !kioskContext.isLocked) {
     return null;
   }
@@ -51,10 +61,53 @@ export function KioskLockScreen() {
       return;
     }
 
+    // First-time setup, step 1: remember the choice, ask to confirm
+    if (setupStep === "choose") {
+      setSetupFirstPin(pinToVerify);
+      setSetupStep("confirm");
+      setPin("");
+      setError(null);
+      return;
+    }
+
+    // First-time setup, step 2: confirm and save
+    if (setupStep === "confirm") {
+      if (pinToVerify !== setupFirstPin) {
+        setError("PINs didn't match — start again");
+        setSetupStep("choose");
+        setSetupFirstPin("");
+        setPin("");
+        return;
+      }
+      setIsVerifying(true);
+      setError(null);
+      const { data, error: fnError } = await supabase.functions.invoke("manage-pin", {
+        body: { staff_id: selectedStaff, pin: pinToVerify, action: "set" },
+      });
+      if (fnError || data?.error) {
+        setError(data?.error || "Couldn't save your PIN — try again");
+        setSetupStep("choose");
+        setSetupFirstPin("");
+        setPin("");
+        setIsVerifying(false);
+        return;
+      }
+      // PIN saved — log them straight in with it
+      const result = await verifyPin(pinToVerify, selectedStaff ?? undefined);
+      setIsVerifying(false);
+      if (result) {
+        navigate("/");
+      } else {
+        setSetupStep(null);
+        setPin("");
+      }
+      return;
+    }
+
     setIsVerifying(true);
     setError(null);
 
-    const result = await verifyPin(pinToVerify);
+    const result = await verifyPin(pinToVerify, selectedStaff ?? undefined);
 
     if (result) {
       navigate("/");
@@ -103,14 +156,16 @@ export function KioskLockScreen() {
         transition={{ delay: 0.1 }}
         className="text-center mb-8"
       >
-        {salonLogo ? (
-          <div className="w-20 h-20 mx-auto mb-4 rounded-xl overflow-hidden">
-            <img src={salonLogo} alt={salonName} className="w-full h-full object-contain" />
-          </div>
-        ) : null}
+        <BrandLogo size="sm" className="mb-4" />
         <h1 className="text-3xl font-bold text-foreground mb-2">{salonName}</h1>
         <p className="text-muted-foreground">
-          {selectedStaff ? "Enter your 4-digit PIN" : "Select your profile to continue"}
+          {setupStep === "choose"
+            ? "Welcome! Choose your 4-digit PIN"
+            : setupStep === "confirm"
+            ? "Enter it once more to confirm"
+            : selectedStaff
+            ? "Enter your 4-digit PIN"
+            : "Select your profile to continue"}
         </p>
       </motion.div>
 
@@ -129,9 +184,9 @@ export function KioskLockScreen() {
               </div>
             ) : availableStaff.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-2">No staff members with PINs</p>
+                <p className="text-muted-foreground mb-2">No staff members yet</p>
                 <p className="text-sm text-muted-foreground">
-                  Ask your manager to set up PINs for kiosk access
+                  Add your team in Staff, then everyone sets their own PIN right here
                 </p>
               </div>
             ) : (
@@ -142,7 +197,12 @@ export function KioskLockScreen() {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => setSelectedStaff(staff.id)}
+                    onClick={() => {
+                      setSelectedStaff(staff.id);
+                      setSetupStep(staff.has_pin ? null : "choose");
+                      setPin("");
+                      setError(null);
+                    }}
                     className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors"
                   >
                     <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -153,6 +213,11 @@ export function KioskLockScreen() {
                     <span className="text-sm font-medium text-foreground truncate max-w-full">
                       {staff.name}
                     </span>
+                    {!staff.has_pin && (
+                      <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/15 text-primary">
+                        Set up PIN
+                      </span>
+                    )}
                   </motion.button>
                 ))}
               </div>
@@ -220,7 +285,11 @@ export function KioskLockScreen() {
 
             {/* Back Button */}
             <button
-              onClick={handleClear}
+              onClick={() => {
+                handleClear();
+                setSetupStep(null);
+                setSetupFirstPin("");
+              }}
               className="w-full mt-6 py-3 text-muted-foreground hover:text-foreground transition-colors"
             >
               ← Back to profile selection

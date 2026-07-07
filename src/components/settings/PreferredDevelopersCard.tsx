@@ -205,7 +205,7 @@ export function PreferredDevelopersCard() {
         <div>
           <h3 className="font-medium text-foreground">Preferred Developers</h3>
           <p className="text-sm text-muted-foreground">
-            Set a default developer line for each color line. The bowl page will auto-filter developers to your preferred line.
+            Tell Mix R Fusion which developer you ACTUALLY mix with each color line — for example a bulk developer you buy separately instead of the line's own. The bowl page auto-fills it, and service cost estimates use YOUR developer's price.
           </p>
         </div>
       </div>

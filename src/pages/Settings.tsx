@@ -24,6 +24,7 @@ import { SalonBrandingCard } from "@/components/settings/SalonBrandingCard";
 import { PreferredDevelopersCard } from "@/components/settings/PreferredDevelopersCard";
 import { ServiceMenuCard } from "@/components/settings/ServiceMenuCard";
 import { PricingModelCard } from "@/components/settings/PricingModelCard";
+import { BillingCard } from "@/components/settings/BillingCard";
 import { DisplayUnitCard } from "@/components/settings/DisplayUnitCard";
 import { BowlsCard } from "@/components/settings/BowlsCard";
 
@@ -125,6 +126,7 @@ export default function Settings() {
 
 
           <TabsContent value="branding">
+            <BillingCard />
             <SalonBrandingCard />
           </TabsContent>
           

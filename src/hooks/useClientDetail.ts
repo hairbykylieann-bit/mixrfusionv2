@@ -23,7 +23,8 @@ export function useClientDetail(clientId: string | null) {
           notes,
           total_amount_mixed,
           total_amount_used,
-          service_id
+          service_id,
+          canvas_preview_url
         `)
         .eq("client_id", clientId)
         .order("session_date", { ascending: false });
@@ -210,6 +211,7 @@ export function useClientDetail(clientId: string | null) {
           components: components.length > 0 ? components : undefined,
           developer: developerInfo,
           serviceId: session.service_id || undefined,
+          canvasPreviewUrl: (session as any).canvas_preview_url || null,
           bowls: bowlRecords.length > 0 ? bowlRecords : undefined,
           serviceName,
         };
@@ -226,6 +228,21 @@ export function useClientDetail(clientId: string | null) {
         .update({ notes })
         .eq("id", sessionId);
       if (error) throw error;
+
+      // Notes have ONE home: the head sheet. Keep the canvas copy in sync so
+      // opening the sketch editor shows the same text.
+      const { data: sessRow } = await supabase
+        .from("color_sessions")
+        .select("canvas_data")
+        .eq("id", sessionId)
+        .single();
+      const canvas = (sessRow?.canvas_data as Record<string, unknown> | null);
+      if (canvas && typeof canvas === "object") {
+        await supabase
+          .from("color_sessions")
+          .update({ canvas_data: { ...canvas, notes } as never })
+          .eq("id", sessionId);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clientDetail", clientId] });

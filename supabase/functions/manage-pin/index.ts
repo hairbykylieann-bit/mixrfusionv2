@@ -49,6 +49,20 @@ serve(async (req) => {
       );
     }
 
+    // Reject PINs a stranger would try first
+    if (action === 'set' || action === 'reset') {
+      const sameDigit = /^(\d)\1{3}$/.test(pin);
+      const asc = '0123456789'.includes(pin);
+      const desc = '9876543210'.includes(pin);
+      const common = ['2580', '0852', '1122', '1212', '2020', '6969'].includes(pin);
+      if (sameDigit || asc || desc || common) {
+        return new Response(
+          JSON.stringify({ error: 'That PIN is too easy to guess. Pick something less obvious.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Create Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!;
@@ -85,35 +99,53 @@ serve(async (req) => {
     }
 
     const userRolesList = userRoles?.map(r => r.role) || [];
-    const hasPermission = userRolesList.includes('admin') || userRolesList.includes('owner');
+    let hasPermission = userRolesList.includes('admin') || userRolesList.includes('owner');
 
-    // If not admin/owner, check if they're a manager with can_manage_staff permission
-    if (!hasPermission) {
-      const { data: staffRecord, error: staffLookupError } = await supabaseAdmin
-        .from('staff')
-        .select('can_manage_staff')
-        .eq('user_id', user.id)
-        .single();
-
-      if (staffLookupError || !staffRecord?.can_manage_staff) {
-        return new Response(
-          JSON.stringify({ error: 'Insufficient permissions to manage staff PINs' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // Resolve the caller's salon (their staff row, or the tenant they own)
+    const { data: callerStaff } = await supabaseAdmin
+      .from('staff')
+      .select('tenant_id, can_manage_staff')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    let callerTenant: string | null = callerStaff?.tenant_id ?? null;
+    if (!callerTenant) {
+      const { data: ownedTenant } = await supabaseAdmin
+        .from('tenants')
+        .select('id')
+        .eq('owner_user_id', user.id)
+        .maybeSingle();
+      callerTenant = ownedTenant?.id ?? null;
     }
+    if (!callerTenant) {
+      return new Response(
+        JSON.stringify({ error: 'No salon found for your account' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (!hasPermission && callerStaff?.can_manage_staff) hasPermission = true;
 
-    // Check if target staff exists
+    // Target staff must exist AND belong to the caller's salon
     const { data: targetStaff, error: targetError } = await supabaseAdmin
       .from('staff')
-      .select('id, name')
+      .select('id, name, tenant_id, pin_hash')
       .eq('id', staff_id)
       .single();
 
-    if (targetError || !targetStaff) {
+    if (targetError || !targetStaff || targetStaff.tenant_id !== callerTenant) {
       return new Response(
         JSON.stringify({ error: 'Staff member not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // First-time self-set: anyone signed into this salon's device may CLAIM an
+    // unset PIN (kiosk "choose your PIN" flow). Changing or removing an
+    // existing PIN still requires staff-management permission.
+    const isFirstTimeSet = action === 'set' && targetStaff.pin_hash === null;
+    if (!hasPermission && !isFirstTimeSet) {
+      return new Response(
+        JSON.stringify({ error: 'Insufficient permissions to manage staff PINs' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -122,6 +154,7 @@ serve(async (req) => {
       const { data: allStaff, error: allStaffError } = await supabaseAdmin
         .from('staff')
         .select('id, pin_hash')
+        .eq('tenant_id', callerTenant)
         .eq('is_active', true)
         .not('pin_hash', 'is', null)
         .neq('id', staff_id);

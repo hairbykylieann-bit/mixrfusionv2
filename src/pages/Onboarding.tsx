@@ -18,6 +18,7 @@ export default function Onboarding() {
   
   // Form data
   const [salonName, setSalonName] = useState("");
+  const [inviteCode, setInviteCode] = useState(() => localStorage.getItem("mixr-invite-code") || "");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [ownerName, setOwnerName] = useState("");
@@ -196,6 +197,7 @@ export default function Onboarding() {
     try {
       const { data, error } = await supabase.functions.invoke("complete-onboarding", {
         body: {
+          inviteCode,
           salonName: salonName.trim(),
           logoUrl,
           ownerName: ownerName.trim(),
@@ -285,71 +287,22 @@ export default function Onboarding() {
                   />
                 </div>
 
-                {/* Logo Upload - Drag & Drop */}
+                {/* Invite code — Kylie gives this out when she sets up a salon */}
                 <div className="space-y-2">
-                  <Label>Logo (optional)</Label>
-                  <div
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={() => document.getElementById('logo-upload')?.click()}
-                    className={`
-                      relative cursor-pointer rounded-xl border-2 border-dashed p-6
-                      transition-all duration-200 ease-in-out
-                      ${isDragging 
-                        ? "border-primary bg-primary/5 scale-[1.02]" 
-                        : logoPreview 
-                          ? "border-border bg-muted/30 hover:border-primary/50" 
-                          : "border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/50"
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-4">
-                      {logoPreview ? (
-                        <div className="w-16 h-16 rounded-lg border border-border overflow-hidden bg-background shadow-sm">
-                          <img 
-                            src={logoPreview} 
-                            alt="Logo preview" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className={`w-16 h-16 rounded-lg flex items-center justify-center transition-colors ${
-                          isDragging ? "bg-primary/10" : "bg-muted"
-                        }`}>
-                          <Building2 className={`w-7 h-7 transition-colors ${
-                            isDragging ? "text-primary" : "text-muted-foreground"
-                          }`} />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          {isUploading ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                              <span>Uploading...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Upload className={`w-4 h-4 ${isDragging ? "text-primary" : ""}`} />
-                              <span>{logoPreview ? "Change logo" : "Drop your logo here"}</span>
-                            </>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {isDragging ? "Release to upload" : "or click to browse • PNG, JPG up to 2MB"}
-                        </p>
-                      </div>
-                    </div>
-                    <input
-                      id="logo-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                      disabled={isUploading}
-                    />
-                  </div>
+                  <Label htmlFor="inviteCode">Invite code</Label>
+                  <Input
+                    id="inviteCode"
+                    placeholder="From your Mix R Fusion setup call"
+                    value={inviteCode}
+                    onChange={(e) => {
+                      setInviteCode(e.target.value.toUpperCase());
+                      localStorage.setItem("mixr-invite-code", e.target.value.toUpperCase());
+                    }}
+                    className="h-12 text-base tracking-widest"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Salon setup is done together with Mix R Fusion. Don't have a code? Reach out to get started.
+                  </p>
                 </div>
 
                 {/* Preview Card */}

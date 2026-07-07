@@ -9,99 +9,114 @@
 
 @layer base {
   :root {
-    /* Paper & Ink palette */
-    --background: 40 23% 95%;          /* #f5f3ee paper */
-    --foreground: 0 0% 18%;            /* #2d2d2d ink */
+    /* MixRFusion brand — Cloud (light) theme.
+       Black = power · White = clarity · Gray = structure · Silver = the R ·
+       Champagne = warmth, RARE. See vault: Redesign Brief — MixRFusion Brand. */
+    --background: 0 0% 96%;            /* Cloud Gray #F4F4F4 */
+    --foreground: 0 0% 7%;             /* Soft Black #111111 */
 
-    --card: 36 19% 89%;                /* #e8e4dd warm linen */
-    --card-foreground: 0 0% 18%;
+    --card: 0 0% 100%;                 /* Clean White */
+    --card-foreground: 0 0% 7%;
 
-    --popover: 40 23% 97%;
-    --popover-foreground: 0 0% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
 
-    /* Deep ink primary */
-    --primary: 0 0% 5%;                /* #0d0d0d */
-    --primary-foreground: 40 23% 95%;
+    --primary: 0 0% 4%;                /* near-Obsidian power black */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 36 19% 89%;
-    --secondary-foreground: 0 0% 18%;
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 7%;
 
-    --muted: 36 19% 89%;
-    --muted-foreground: 0 0% 35%;
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 45%;      /* Steel-adjacent, AA on cloud */
 
-    --accent: 36 19% 84%;
-    --accent-foreground: 0 0% 5%;
+    --accent: 0 0% 85%;                /* Fusion Silver #D8D8D8 */
+    --accent-foreground: 0 0% 4%;
 
-    /* Status colors — kept functional, slightly muted to fit paper */
-    --success: 142 45% 38%;
+    --champagne: 44 30% 60%;           /* Muted Champagne #B8A77A — sparingly */
+    --champagne-foreground: 0 0% 4%;
+
+    /* Status colors — in-app semantics only (allowed by brand rules) */
+    --success: 142 45% 34%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 32 75% 45%;
+    --warning: 32 80% 42%;
     --warning-foreground: 0 0% 100%;
 
     --destructive: 0 65% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Hairline borders */
-    --border: 0 0% 18% / 0.12;
-    --input: 0 0% 18% / 0.18;
-    --ring: 0 0% 5%;
+    --border: 0 0% 7% / 0.12;          /* hairline structure */
+    --input: 0 0% 7% / 0.18;
+    --ring: 0 0% 23%;                  /* Graphite */
 
-    --radius: 0.125rem;
+    --radius: 0.25rem;                 /* sharp, not bubbly */
 
-    /* Sidebar mirrors paper */
-    --sidebar-background: 40 23% 95%;
-    --sidebar-foreground: 0 0% 18%;
-    --sidebar-primary: 0 0% 5%;
-    --sidebar-primary-foreground: 40 23% 95%;
-    --sidebar-accent: 36 19% 89%;
-    --sidebar-accent-foreground: 0 0% 5%;
-    --sidebar-border: 0 0% 18% / 0.12;
-    --sidebar-ring: 0 0% 5%;
+    --sidebar-background: 0 0% 96%;
+    --sidebar-foreground: 0 0% 7%;
+    --sidebar-primary: 0 0% 4%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 92%;
+    --sidebar-accent-foreground: 0 0% 4%;
+    --sidebar-border: 0 0% 7% / 0.12;
+    --sidebar-ring: 0 0% 23%;
 
-    /* No drop shadows — kept as no-ops for legacy components */
-    --tile-shadow: 0 0 0 1px hsl(0 0% 18% / 0.08);
-    --tile-shadow-hover: 0 0 0 1px hsl(0 0% 18% / 0.25);
-    --card-shadow: 0 0 0 1px hsl(0 0% 18% / 0.08);
+    --tile-shadow: 0 0 0 1px hsl(0 0% 7% / 0.08);
+    --tile-shadow-hover: 0 0 0 1px hsl(0 0% 7% / 0.25);
+    --card-shadow: 0 0 0 1px hsl(0 0% 7% / 0.08);
   }
 
   .dark {
-    --background: 0 0% 7%;
-    --foreground: 40 23% 92%;
+    /* MixRFusion brand — Obsidian (dark) theme. The premium experience. */
+    --background: 0 0% 7%;             /* Soft Black #111111 */
+    --foreground: 0 0% 100%;
 
-    --card: 0 0% 11%;
-    --card-foreground: 40 23% 92%;
+    --card: 0 0% 14%;                  /* Charcoal #242424 */
+    --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 11%;
-    --popover-foreground: 40 23% 92%;
+    --popover: 0 0% 14%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 40 23% 92%;
-    --primary-foreground: 0 0% 7%;
+    --primary: 0 0% 85%;               /* Fusion Silver #D8D8D8 */
+    --primary-foreground: 0 0% 2%;     /* Obsidian */
 
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 40 23% 92%;
+    --secondary: 0 0% 23%;             /* Graphite #3A3A3A */
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 60%;
+    --muted-foreground: 0 0% 55%;      /* Steel Gray #8C8C8C */
 
-    --accent: 0 0% 18%;
-    --accent-foreground: 40 23% 92%;
+    --accent: 0 0% 23%;
+    --accent-foreground: 0 0% 96%;
 
-    --destructive: 0 60% 45%;
+    --champagne: 44 30% 60%;
+    --champagne-foreground: 0 0% 4%;
+
+    --success: 142 45% 42%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 32 85% 52%;
+    --warning-foreground: 0 0% 4%;
+
+    --destructive: 0 60% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 23% 92% / 0.12;
-    --input: 40 23% 92% / 0.18;
-    --ring: 40 23% 92%;
+    --border: 0 0% 100% / 0.10;
+    --input: 0 0% 100% / 0.16;
+    --ring: 0 0% 85%;
 
     --sidebar-background: 0 0% 7%;
-    --sidebar-foreground: 40 23% 92%;
-    --sidebar-primary: 40 23% 92%;
-    --sidebar-primary-foreground: 0 0% 7%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 85%;
+    --sidebar-primary-foreground: 0 0% 2%;
     --sidebar-accent: 0 0% 14%;
-    --sidebar-accent-foreground: 40 23% 92%;
-    --sidebar-border: 40 23% 92% / 0.12;
-    --sidebar-ring: 40 23% 92%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.10;
+    --sidebar-ring: 0 0% 85%;
+
+    --tile-shadow: 0 0 0 1px hsl(0 0% 100% / 0.06);
+    --tile-shadow-hover: 0 0 0 1px hsl(0 0% 100% / 0.18);
+    --card-shadow: 0 0 0 1px hsl(0 0% 100% / 0.06);
   }
 }
 
@@ -110,13 +125,30 @@
     @apply border-border;
   }
 
+  /* The metallic R — the brand's signature mark */
+  .text-metallic {
+    background-image: linear-gradient(180deg, #f2f2f2 0%, #8c8c8c 52%, #d8d8d8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .bg-obsidian {
+    background-color: #050505;
+  }
+
   html {
-    font-family: 'Hind', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
+    /* Radix dialogs/sheets can leave pointer-events:none stuck on <body>
+       after an interrupted close, freezing all clicks and typing app-wide
+       (the old Auth-page "Input Debug" HUD existed to chase this). Open
+       overlays still work — they sit on top and catch their own events. */
+    pointer-events: auto !important;
     @apply bg-background text-foreground;
     line-height: 1.55;
     /* Honor iOS/Android safe areas on notched devices */
@@ -160,7 +192,7 @@
   /* Eyebrow label — tracked uppercase */
   .eyebrow {
     @apply text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground;
-    font-family: 'Hind', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   /* Navigation tile (legacy, retained for any direct consumers) */

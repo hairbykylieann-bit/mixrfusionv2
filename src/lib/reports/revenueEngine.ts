@@ -335,12 +335,3 @@ export function calculatePeriodTotals({ sessions, bowls, items, serviceMap, sett
     perSession,
   };
 }
-
-// ─── Legacy compatibility exports ─────────────────────────────────────────
-// Kept so existing imports keep compiling while we migrate them over.
-
-export interface BowlForCalc {
-  developer_amount: number | null;
-  developer_unit: string | null;
-  items: Array<{ amount: number; unit: string }>;
-}

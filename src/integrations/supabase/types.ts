@@ -1080,6 +1080,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          processing_time_minutes: number | null
           parent_bowl_id: string | null
           remix_index: number
           reweighed_amount: number | null
@@ -1100,6 +1101,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          processing_time_minutes?: number | null
           parent_bowl_id?: string | null
           remix_index?: number
           reweighed_amount?: number | null
@@ -1120,6 +1122,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          processing_time_minutes?: number | null
           parent_bowl_id?: string | null
           remix_index?: number
           reweighed_amount?: number | null

@@ -47,7 +47,17 @@ serve(async (req) => {
     console.log("Processing onboarding for user:", user.id);
 
     // Parse request body
-    const { salonName, logoUrl, ownerName, phone, pin } = await req.json();
+    const { salonName, logoUrl, ownerName, phone, pin, inviteCode } = await req.json();
+
+    // White-glove gate: creating a salon requires the invite code Kylie gives
+    // out at demos. Set/rotate via the ONBOARDING_INVITE_CODE secret.
+    const requiredCode = Deno.env.get('ONBOARDING_INVITE_CODE');
+    if (requiredCode && (inviteCode ?? '').trim().toUpperCase() !== requiredCode.trim().toUpperCase()) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid invite code. Salon setup is done together with Mix R Fusion — reach out to get started.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Validate required fields
     if (!salonName || !ownerName || !phone || !pin) {

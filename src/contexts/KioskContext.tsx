@@ -36,9 +36,9 @@ interface KioskContextValue {
   lock: () => void;
   logout: () => void;
   unlock: (staff: KioskStaff) => void;
-  verifyPin: (pin: string) => Promise<KioskStaff | null>;
+  verifyPin: (pin: string, staffId?: string) => Promise<KioskStaff | null>;
   resetActivity: () => void;
-  availableStaff: { id: string; name: string; initials: string }[];
+  availableStaff: { id: string; name: string; initials: string; has_pin: boolean }[];
   isLoadingStaff: boolean;
 }
 
@@ -91,6 +91,7 @@ export function KioskProvider({ children }: { children: ReactNode }) {
         const staffWithInitials = filtered.map((s: any) => ({
           id: s.id,
           name: s.name,
+          has_pin: s.has_pin ?? true, // pre-migration directories don't report it
           initials: s.name
             .split(" ")
             .map((n: string) => n[0])
@@ -161,7 +162,7 @@ export function KioskProvider({ children }: { children: ReactNode }) {
     setLastActivityTime(new Date());
   }, []);
 
-  const verifyPin = useCallback(async (pin: string): Promise<KioskStaff | null> => {
+  const verifyPin = useCallback(async (pin: string, staffId?: string): Promise<KioskStaff | null> => {
     if (!tenant?.id) {
       toast.error("No salon context available");
       return null;
@@ -169,7 +170,7 @@ export function KioskProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data, error } = await supabase.functions.invoke("verify-pin", {
-        body: { pin, tenant_id: tenant.id },
+        body: { pin, tenant_id: tenant.id, staff_id: staffId ?? null },
       });
 
       if (error) {

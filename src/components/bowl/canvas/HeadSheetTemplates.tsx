@@ -1,8 +1,8 @@
-import frontAsset from "@/assets/headsheets/front.png.asset.json";
-import backAsset from "@/assets/headsheets/back.png.asset.json";
-import leftAsset from "@/assets/headsheets/left.png.asset.json";
-import rightAsset from "@/assets/headsheets/right.png.asset.json";
-import topAsset from "@/assets/headsheets/top.png.asset.json";
+// Head sheet templates are bundled with the app (public/headsheets/*.svg).
+// They previously lived on Lovable's asset servers (/__l5e/...) and broke the
+// moment the app was hosted anywhere else. To use custom artwork, replace the
+// files in public/headsheets/ — keep the 1024x1536 aspect so existing saved
+// sketches stay aligned.
 
 export type TemplateKey = "front" | "back" | "left" | "right" | "top" | "blank";
 
@@ -20,11 +20,11 @@ export const VIEWBOX_W = 1024;
 export const VIEWBOX_H = 1536;
 
 export const TEMPLATE_URLS: Record<Exclude<TemplateKey, "blank">, string> = {
-  front: frontAsset.url,
-  back: backAsset.url,
-  left: leftAsset.url,
-  right: rightAsset.url,
-  top: topAsset.url,
+  front: "/headsheets/front.svg",
+  back: "/headsheets/back.svg",
+  left: "/headsheets/left.svg",
+  right: "/headsheets/right.svg",
+  top: "/headsheets/top.svg",
 };
 
 export function HeadSheetTemplate({ template }: { template: TemplateKey }) {

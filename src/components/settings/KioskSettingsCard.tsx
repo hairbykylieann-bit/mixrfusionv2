@@ -50,12 +50,15 @@ export function KioskSettingsCard() {
           <div className="space-y-0.5">
             <Label className="text-foreground font-medium">Enable Device Sharing</Label>
             <p className="text-sm text-muted-foreground">
-              Allow multiple stylists to use this device with quick PIN login
+              Turns THIS device (e.g. the salon iPad) into a shared station with quick PIN login. Other devices aren't affected.
             </p>
           </div>
           <Switch
             checked={isKioskMode}
-            onCheckedChange={(checked) => enableKioskMode(checked)}
+            onCheckedChange={(checked) => {
+              enableKioskMode(checked); // this device
+              updateSettings({ kiosk_mode_enabled: checked }); // salon-level flag
+            }}
           />
         </div>
 
@@ -73,7 +76,7 @@ export function KioskSettingsCard() {
             onValueChange={(value) =>
               updateSettings({ pin_timeout_minutes: parseInt(value) })
             }
-            disabled={isUpdating || !settings.kiosk_mode_enabled}
+            disabled={isUpdating || !isKioskMode}
           >
             <SelectTrigger className="w-full">
               <SelectValue />

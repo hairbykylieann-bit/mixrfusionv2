@@ -335,7 +335,11 @@ function computeComponentCosts(
       : ["color", "toner"];
 
   const active = products.filter((p) => p.isActive);
-  const relevant = active.filter((p) => typesToInclude.includes(p.type.toLowerCase()));
+  // Only priced products count — a $0 product is a data-entry gap and would
+  // silently drag the line's average cost down (same rule as developers).
+  const relevant = active.filter(
+    (p) => typesToInclude.includes(p.type.toLowerCase()) && p.cost > 0,
+  );
 
   const grouped = new Map<string, {
     totalCost: number; totalSize: number; brand: string; line: string; productType: ComponentProductType;
@@ -541,8 +545,67 @@ function CostBreakdownSection({
     );
   }
 
+  // Service-level totals: sum each component's cheapest and priciest line
+  const costRange = (() => {
+    let lo = 0;
+    let hi = 0;
+    let any = false;
+    for (const c of service.components) {
+      const rows = computeComponentCosts(
+        c, products, developerDefaults, devLineCostPerMl, salonAvgDevCostPerMl, hasPricedDevelopers,
+      );
+      if (rows.length === 0) continue;
+      any = true;
+      const totals = rows.map((r) => r.totalProductCost);
+      lo += Math.min(...totals);
+      hi += Math.max(...totals);
+    }
+    return any ? { lo, hi } : null;
+  })();
+
+  const unpricedCount = products.filter(
+    (p) => p.isActive && p.cost <= 0 &&
+      ["color", "toner", "lightener", "developer"].includes(p.type.toLowerCase()),
+  ).length;
+
+  const price = Number(service.price) || 0;
+  const pctHi = price > 0 && costRange ? (costRange.hi / price) * 100 : null;
+
   return (
     <div className="space-y-4">
+      {costRange && (
+        <div className="rounded-lg border border-border bg-muted/40 p-3">
+          <p className="text-sm text-foreground">
+            Product cost at your prices:{" "}
+            <span className="font-semibold">
+              ${costRange.lo.toFixed(2)}
+              {costRange.hi - costRange.lo > 0.005 ? ` – $${costRange.hi.toFixed(2)}` : ""}
+            </span>
+            {pctHi !== null && (
+              <>
+                {" "}·{" "}
+                <span
+                  className={
+                    pctHi <= 15 ? "text-success font-semibold"
+                    : pctHi <= 30 ? "text-warning font-semibold"
+                    : "text-destructive font-semibold"
+                  }
+                >
+                  up to {pctHi.toFixed(0)}% of your ${price.toFixed(2)} price
+                </span>
+              </>
+            )}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            The range covers your cheapest to priciest color line. Most salons aim to keep product under ~15% of the service price.
+          </p>
+          {unpricedCount > 0 && (
+            <p className="text-xs text-warning mt-1">
+              {unpricedCount} product{unpricedCount === 1 ? " has" : "s have"} no price set and {unpricedCount === 1 ? "is" : "are"} excluded — set prices in Inventory for accurate estimates.
+            </p>
+          )}
+        </div>
+      )}
       {service.components.map((c, i) => (
         <div key={i} className="space-y-2">
           <div className="flex items-baseline justify-between border-b border-border/40 pb-1">

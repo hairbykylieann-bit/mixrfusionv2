@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useState as useCollapseState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { calculateServiceCharge } from "@/lib/utils";
 import { Loader2, Pencil, Check, X, TrendingUp } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
@@ -194,38 +197,89 @@ export function PricingModelCard() {
         </p>
       </div>
 
-      {/* Bowl Fee, Waste Factor, Rounding */}
+      {/* Bowl Fee */}
       <div className="border-t border-border pt-4 space-y-1">
         <EditableField
           label="Bowl Fee"
-          description="Fixed charge per bowl mixed"
+          description="Fixed charge added for each bowl mixed"
           value={settings.bowl_fee}
           prefix="$"
           onSave={(v) => updateSettings({ bowl_fee: v })}
           isUpdating={isUpdating}
           step={0.25}
         />
-
-        <EditableField
-          label="Waste Factor"
-          description="Expected product loss baked into pricing"
-          value={settings.waste_factor_percent}
-          suffix="%"
-          onSave={(v) => updateSettings({ waste_factor_percent: v })}
-          isUpdating={isUpdating}
-        />
-
-        <EditableField
-          label="Rounding"
-          description="Round charges to nearest increment"
-          value={settings.rounding_amount}
-          prefix="$"
-          onSave={(v) => updateSettings({ rounding_amount: v })}
-          isUpdating={isUpdating}
-          step={0.25}
-        />
       </div>
 
+      {/* Live example — makes the whole model concrete */}
+      <div className="rounded-lg bg-muted/40 border border-border p-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+          What this means
+        </p>
+        <p className="text-sm text-foreground">
+          A bowl that costs you <span className="font-semibold">$10.00</span> in product
+          charges the client{" "}
+          <span className="font-semibold text-primary">
+            ${calculateServiceCharge(
+              10,
+              multiplier,
+              settings.waste_factor_percent,
+              settings.bowl_fee,
+              settings.rounding_amount,
+            ).toFixed(2)}
+          </span>
+          {" "}when it goes over the service allotment (or has no service attached).
+        </p>
+      </div>
+
+      {/* Advanced — sensible defaults, most salons never touch these */}
+      <AdvancedPricing settings={settings} updateSettings={updateSettings} isUpdating={isUpdating} />
+
     </motion.div>
+  );
+}
+
+
+function AdvancedPricing({
+  settings,
+  updateSettings,
+  isUpdating,
+}: {
+  settings: { waste_factor_percent: number; rounding_amount: number };
+  updateSettings: (v: Record<string, number>) => void;
+  isUpdating: boolean;
+}) {
+  const [open, setOpen] = useCollapseState(false);
+  return (
+    <div className="border-t border-border pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <span>Advanced (already set to sensible defaults)</span>
+        {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1">
+          <EditableField
+            label="Waste cushion"
+            description={`Charges include a small cushion for unavoidable waste (bowl residue, tube ends). Default 5% — you likely never need to change this.`}
+            value={settings.waste_factor_percent}
+            suffix="%"
+            onSave={(v) => updateSettings({ waste_factor_percent: v })}
+            isUpdating={isUpdating}
+          />
+          <EditableField
+            label="Price rounding"
+            description={`Charges round to a clean number so clients never see $37.61. Default $0.25.`}
+            value={settings.rounding_amount}
+            prefix="$"
+            onSave={(v) => updateSettings({ rounding_amount: v })}
+            isUpdating={isUpdating}
+            step={0.25}
+          />
+        </div>
+      )}
+    </div>
   );
 }

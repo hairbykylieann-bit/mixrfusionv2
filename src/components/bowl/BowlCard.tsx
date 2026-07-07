@@ -50,7 +50,8 @@ export interface Bowl {
   name: string;
   mixItems: MixItem[];
   developers: Developer[];
-  notes?: string;
+  /** Processing time in minutes (digits only). NOT free-text notes — those live in the head sheet (session canvas). */
+  processingTime?: string;
   leftoverAmount?: string;
   leftoverUnit?: string;
   // Bowl preset (with known tare weight)
@@ -312,7 +313,7 @@ export function BowlCard({
 
   const updateProcessingTime = (value: string) => {
     const cleaned = value.replace(/[^0-9]/g, "");
-    onUpdate({ ...bowl, notes: cleaned });
+    onUpdate({ ...bowl, processingTime: cleaned });
   };
 
   const addMixItem = () => {
@@ -559,7 +560,6 @@ export function BowlCard({
                     products={products.filter(p => p.type === (item.productType || "Color"))}
                     value={item.product}
                     onValueChange={(v) => updateMixItem(item.id, "product", v)}
-                    onAddNew={() => console.log("Add new product")}
                   />
                 </div>
               </div>
@@ -717,7 +717,7 @@ export function BowlCard({
               inputMode="numeric"
               min={0}
               step={1}
-              value={bowl.notes && /^\d+$/.test(bowl.notes) ? bowl.notes : ""}
+              value={bowl.processingTime ?? ""}
               onChange={(e) => updateProcessingTime(e.target.value)}
               placeholder="0"
               className="w-20 h-9 text-right focus-visible:ring-inset"

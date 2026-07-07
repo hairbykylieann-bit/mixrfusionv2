@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Scissors, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Please enter a valid email address").max(255),
@@ -38,22 +39,21 @@ async function checkPlatformAdmin(userId: string): Promise<boolean> {
 }
 
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
+  // Public /auth is SIGN-IN ONLY. Account creation lives at the unlisted
+  // /welcome route that Kylie shares when she sets up a salon (and the
+  // server-side invite-code gate in complete-onboarding backs it up).
+  const isWelcomeRoute = window.location.pathname === "/welcome";
+  const [isLogin, setIsLogin] = useState(!isWelcomeRoute);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [debug, setDebug] = useState({
-    active: "",
-    lastPointer: "",
-    lastKey: "",
-  });
-
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -69,39 +69,7 @@ export default function Auth() {
     }
   }, [user, navigate, location.state]);
 
-  // Debug focus/overlay issues (shows what receives clicks + key events)
-  useEffect(() => {
-    const updateActive = () => {
-      const el = document.activeElement as HTMLElement | null;
-      const label = el
-        ? `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}${el.className ? `.${String(el.className).split(" ").filter(Boolean).slice(0, 2).join(".")}` : ""}`
-        : "";
-      setDebug((d) => (d.active === label ? d : { ...d, active: label }));
-    };
 
-    const onPointerDown = (e: PointerEvent) => {
-      const t = e.target as HTMLElement | null;
-      const label = t
-        ? `${t.tagName.toLowerCase()}${t.id ? `#${t.id}` : ""}${t.className ? `.${String(t.className).split(" ").filter(Boolean).slice(0, 2).join(".")}` : ""}`
-        : "";
-      setDebug((d) => ({ ...d, lastPointer: label }));
-      updateActive();
-    };
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      setDebug((d) => ({ ...d, lastKey: e.key }));
-      updateActive();
-    };
-
-    window.addEventListener("pointerdown", onPointerDown, true);
-    window.addEventListener("keydown", onKeyDown, true);
-    updateActive();
-
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown, true);
-      window.removeEventListener("keydown", onKeyDown, true);
-    };
-  }, []);
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -122,6 +90,24 @@ export default function Auth() {
 
   // Use appropriate form based on mode - cast to any to satisfy TypeScript since both have email/password
   const form = isLogin ? loginForm : (signupForm as unknown as typeof loginForm);
+
+  const sendResetLink = async () => {
+    const email = loginForm.getValues("email");
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      toast.error("Enter your email above first, then tap the reset link.");
+      return;
+    }
+    setIsSubmitting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setIsSubmitting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setResetSent(true);
+  };
 
   const onSubmit = async (values: LoginFormValues | SignupFormValues) => {
     setIsSubmitting(true);
@@ -173,23 +159,11 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 pointer-events-auto">
-      {/* 
-      <div className="fixed left-3 top-3 z-50 rounded-md border border-border/50 bg-card px-3 py-2 text-xs text-foreground shadow-sm pointer-events-none">
-        <div className="font-medium">Input Debug</div>
-        <div className="mt-1 text-muted-foreground">Active: <span className="text-foreground">{debug.active || "(none)"}</span></div>
-        <div className="text-muted-foreground">Last click: <span className="text-foreground">{debug.lastPointer || "(none)"}</span></div>
-        <div className="text-muted-foreground">Last key: <span className="text-foreground">{debug.lastKey || "(none)"}</span></div>
-      </div>
-      */}
+    <div className="dark min-h-screen flex items-center justify-center bg-obsidian p-4 pointer-events-auto text-foreground">
       <div className="w-full max-w-md animate-fade-up pointer-events-auto">
         {/* Logo/Brand */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-4">
-            <Scissors className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-semibold text-foreground">MixR</h1>
-          <p className="text-muted-foreground text-sm">Salon Color Management</p>
+        <div className="flex flex-col items-center mb-10">
+          <BrandLogo size="lg" tagline />
         </div>
 
         <Card className="border-border/50 relative z-10 pointer-events-auto">
@@ -293,6 +267,25 @@ export default function Auth() {
                   />
                 )}
 
+                {isLogin && (
+                  <div className="text-right -mt-2">
+                    {resetSent ? (
+                      <p className="text-xs text-success">
+                        Reset link sent — check your email (and spam folder).
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={sendResetLink}
+                        disabled={isSubmitting}
+                        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                      >
+                        Forgot your password?
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
@@ -307,27 +300,21 @@ export default function Auth() {
             </Form>
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-4">
-            <div className="relative w-full">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">
-                  {isLogin ? "New to MixR?" : "Already have an account?"}
-                </span>
-              </div>
-            </div>
-
-            <Button type="button" variant="outline" className="w-full" onClick={handleModeSwitch}>
-              {isLogin ? "Create an account" : "Sign in instead"}
-            </Button>
+          <CardFooter className="flex flex-col gap-2">
+            {!isLogin ? (
+              <p className="text-center text-xs text-muted-foreground">
+                Already have an account?{" "}
+                <a href="/auth" className="underline underline-offset-2 hover:text-foreground">
+                  Sign in
+                </a>
+              </p>
+            ) : (
+              <p className="text-center text-xs text-muted-foreground">
+                New salon? Setup is done together with Mix R Fusion — reach out to get started.
+              </p>
+            )}
           </CardFooter>
         </Card>
-
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
-        </p>
       </div>
     </div>
   );

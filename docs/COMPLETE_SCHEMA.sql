@@ -1,3 +1,7 @@
+-- ⚠️ STALE — DO NOT TRUST (marked 2026-07-06).
+-- This snapshot predates many migrations (integer stock, buggy triggers, no
+-- permissions hardening). The REAL schema = supabase/migrations/ applied in order.
+
 -- =====================================================
 -- MixR Fusion - Complete Database Schema
 -- Run this in your Supabase SQL Editor
