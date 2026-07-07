@@ -1,0 +1,38 @@
+project_id = "rpxavsquqbkovpuhdatd"
+
+[functions.mira-parse]
+verify_jwt = false
+
+[functions.mira-tts]
+verify_jwt = false
+
+[functions.catalog-import]
+verify_jwt = false
+
+[functions.log-error]
+verify_jwt = false
+
+[functions.verify-pin]
+verify_jwt = false
+
+[functions.manage-pin]
+verify_jwt = true
+
+[functions.complete-onboarding]
+verify_jwt = true
+
+[functions.mira-chat]
+verify_jwt = false
+
+
+[functions.accept-staff-invite]
+verify_jwt = true
+
+[functions.get-invite-info]
+verify_jwt = false
+
+[functions.scan-receipt]
+verify_jwt = false
+
+[functions.elevenlabs-scribe-token]
+verify_jwt = false

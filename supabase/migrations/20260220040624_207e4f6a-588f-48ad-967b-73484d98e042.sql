@@ -1,0 +1,1 @@
+ALTER TABLE public.service_menu ADD COLUMN product_type text NOT NULL DEFAULT 'color';

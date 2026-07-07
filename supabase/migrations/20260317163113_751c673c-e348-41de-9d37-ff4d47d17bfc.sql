@@ -1,0 +1,1 @@
+ALTER TABLE public.bowl_items ADD COLUMN item_type text NOT NULL DEFAULT 'color';

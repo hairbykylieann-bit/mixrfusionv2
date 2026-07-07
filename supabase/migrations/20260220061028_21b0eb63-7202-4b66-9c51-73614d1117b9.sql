@@ -1,0 +1,1 @@
+ALTER TABLE public.staff ADD COLUMN can_edit_formulas boolean NOT NULL DEFAULT false;

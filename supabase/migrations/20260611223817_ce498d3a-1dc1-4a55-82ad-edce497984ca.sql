@@ -1,0 +1,1 @@
+DELETE FROM public.staff_invitations;
