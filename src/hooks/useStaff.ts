@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { isMissingColumnError, stripPendingColumns } from "@/lib/schemaFallback";
 import type { Database } from "@/integrations/supabase/types";
 import { useTenant } from "@/contexts/TenantContext";
 
@@ -83,11 +84,13 @@ export function useStaff() {
 
   const createStaff = useMutation({
     mutationFn: async (newStaff: StaffInsert) => {
-      const { data, error } = await supabase
-        .from("staff")
-        .insert({ ...newStaff, tenant_id: tenantId })
-        .select()
-        .single();
+      const row = { ...newStaff, tenant_id: tenantId };
+      let { data, error } = await supabase.from("staff").insert(row).select().single();
+      if (error && isMissingColumnError(error)) {
+        // Old database schema (migrations pending) — save without the new fields
+        ({ data, error } = await supabase.from("staff")
+          .insert(stripPendingColumns("staff", row)).select().single());
+      }
       if (error) throw error;
       return data;
     },
@@ -101,12 +104,17 @@ export function useStaff() {
 
   const updateStaff = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: StaffUpdate }) => {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("staff")
         .update(updates)
         .eq("id", id)
         .select()
         .single();
+      if (error && isMissingColumnError(error)) {
+        ({ data, error } = await supabase.from("staff")
+          .update(stripPendingColumns("staff", updates as Record<string, unknown>))
+          .eq("id", id).select().single());
+      }
       if (error) throw error;
       return data;
     },

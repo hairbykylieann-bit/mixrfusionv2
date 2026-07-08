@@ -30,6 +30,7 @@ const adjustStock = async (productId: string, delta: number) => {
 };
 import { useSalonSettings, SalonSettings } from "@/hooks/useSalonSettings";
 import { useSubscription } from "@/hooks/useSubscription";
+import { isMissingColumnError, stripPendingColumns } from "@/lib/schemaFallback";
 import { calculateServiceCharge } from "@/lib/utils";
 import { useClients } from "@/hooks/useClients";
 import { useClientDetail } from "@/hooks/useClientDetail";
@@ -1409,9 +1410,7 @@ export default function NewBowl() {
           const firstDev = bowl.developers.find(d => d.product && d.amount);
 
           // Update the session_bowls row
-          await supabase
-            .from('session_bowls')
-            .update({
+          const bowlUpdateRow: Record<string, unknown> = {
               name: bowl.name,
               developer_product_id: firstDev?.product || null,
               developer_amount: firstDev?.amount ? parseFloat(firstDev.amount) : null,
@@ -1425,9 +1424,16 @@ export default function NewBowl() {
               bowl_tare_unit: bowl.bowlTareUnit || null,
               reweighed_amount: bowl.reweighedAmount ? parseFloat(bowl.reweighedAmount) : null,
               reweighed_unit: bowl.reweighedUnit || null,
-            } as any)
-
-            .eq('id', dbBowlId);
+            };
+          {
+            const { error: updErr } = await supabase.from('session_bowls')
+              .update(bowlUpdateRow as any).eq('id', dbBowlId);
+            if (updErr && isMissingColumnError(updErr)) {
+              await supabase.from('session_bowls')
+                .update(stripPendingColumns('session_bowls', bowlUpdateRow) as any)
+                .eq('id', dbBowlId);
+            }
+          }
 
           // Re-insert color bowl items
           const validItems = bowl.mixItems.filter(item => item.product && item.amount);
@@ -1522,9 +1528,7 @@ export default function NewBowl() {
         // Get first developer for backward-compat session_bowls columns
         const firstDev = bowl.developers.find(d => d.product && d.amount);
 
-        const { data: sessionBowl, error: bowlError } = await supabase
-          .from('session_bowls')
-          .insert({
+        const bowlInsertRow: Record<string, unknown> = {
             session_id: sessionId,
             name: bowl.name,
             developer_product_id: firstDev?.product || null,
@@ -1540,11 +1544,15 @@ export default function NewBowl() {
             bowl_tare_unit: bowl.bowlTareUnit || null,
             reweighed_amount: bowl.reweighedAmount ? parseFloat(bowl.reweighedAmount) : null,
             reweighed_unit: bowl.reweighedUnit || null,
-          } as any)
-
-          .select()
-          .single();
-
+          };
+        let { data: sessionBowl, error: bowlError } = await supabase
+          .from('session_bowls').insert(bowlInsertRow as any).select().single();
+        if (bowlError && isMissingColumnError(bowlError)) {
+          ({ data: sessionBowl, error: bowlError } = await supabase
+            .from('session_bowls')
+            .insert(stripPendingColumns('session_bowls', bowlInsertRow) as any)
+            .select().single());
+        }
         if (bowlError) throw bowlError;
 
         // Create bowl items for color mix items
