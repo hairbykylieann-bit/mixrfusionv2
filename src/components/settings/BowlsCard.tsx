@@ -34,7 +34,7 @@ export function BowlsCard() {
   const { bowls, isLoading, createBowl, updateBowl, deleteBowl } = useSalonBowls();
   const { settings } = useSalonSettings();
   const { tenantId } = useTenant();
-  const preferredUnit = settings?.preferred_display_unit || "oz"; // match DB default
+  const preferredUnit = settings?.preferred_display_unit || "g"; // match DB default
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SalonBowl | null>(null);

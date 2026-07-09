@@ -80,7 +80,7 @@ export function useServiceMenu() {
   const queryClient = useQueryClient();
   const { tenantId } = useTenant();
   const { settings } = useSalonSettings();
-  const preferredUnit = settings?.preferred_display_unit || "oz";
+  const preferredUnit = settings?.preferred_display_unit || "g";
   const hasSeeded = useRef(false);
 
   const { data: services = [], isLoading } = useQuery({

@@ -490,7 +490,7 @@ export default function Reports() {
   const { stats, stylistReports, categoryReports, isLoading } = useReportsData(dateRange);
   const { effectiveStaff, isLoading: staffLoading } = useEffectiveStaff();
   const { settings } = useSalonSettings();
-  const displayUnit = settings?.preferred_display_unit || "oz";
+  const displayUnit = settings?.preferred_display_unit || "g";
   const unitLabel = getUnitLabel(displayUnit);
 
   const handleDateRangeChange = (range: DateRange) => {

@@ -44,7 +44,7 @@ export default function StaffReport() {
   const reportData = useStaffReport(staffId, dateRange);
   const { staff: allStaff } = useStaff();
   const { settings } = useSalonSettings();
-  const displayUnit = settings?.preferred_display_unit || "oz";
+  const displayUnit = settings?.preferred_display_unit || "g";
   
   const staffForEdit = allStaff.find(s => s.id === staffId);
 

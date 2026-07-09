@@ -8,7 +8,7 @@ export function DisplayUnitCard() {
 
   if (!settings) return null;
 
-  const currentUnit = (settings as any).preferred_display_unit || "oz";
+  const currentUnit = (settings as any).preferred_display_unit || "g";
 
   return (
     <motion.div

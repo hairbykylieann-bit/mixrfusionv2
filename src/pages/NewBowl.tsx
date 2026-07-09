@@ -280,7 +280,7 @@ export default function NewBowl() {
 
   const { settings } = useSalonSettings();
   const { canWrite: subscriptionCanWrite } = useSubscription();
-  const preferredUnit = settings?.preferred_display_unit || "oz";
+  const preferredUnit = settings?.preferred_display_unit || "g";
   const { clients, isLoading: clientsLoading, createClient } = useClients();
   const { effectiveStaff, isLoading: staffLoading } = useEffectiveStaff();
   const { tenantId } = useTenant();

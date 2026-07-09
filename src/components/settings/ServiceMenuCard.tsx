@@ -649,7 +649,7 @@ export function ServiceMenuCard() {
   const { products } = useProducts();
   const { settings } = useSalonSettings();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const displayUnit = settings?.preferred_display_unit || "oz";
+  const displayUnit = settings?.preferred_display_unit || "g";
 
   const { data: developerDefaults = [] } = useQuery({
     queryKey: ["line-developer-defaults"],
