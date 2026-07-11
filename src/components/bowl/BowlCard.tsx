@@ -16,6 +16,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ProductCombobox, Product } from "./ProductCombobox";
 import { calculateServiceCharge } from "@/lib/utils";
+import { resolveEffectiveMultiplier } from "@/lib/pricing/effectiveMultiplier";
 import { SalonSettings } from "@/hooks/useSalonSettings";
 import { ServiceMenuItem } from "@/hooks/useServiceMenu";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -241,9 +242,7 @@ export function BowlCard({
     }
 
     const totalProductCost = colorCost + devCost;
-    const backbarMultiplier = (staffMarkup?.has_custom_markup && staffMarkup.custom_markup_percent > 0)
-      ? staffMarkup.custom_markup_percent
-      : (salonSettings?.backbar_multiplier ?? 4);
+    const backbarMultiplier = resolveEffectiveMultiplier(staffMarkup, salonSettings?.backbar_multiplier);
     const effectiveBowlFee = (staffBowlFee?.has_custom_bowl_fee)
       ? staffBowlFee.custom_bowl_fee
       : (salonSettings?.bowl_fee ?? 0);

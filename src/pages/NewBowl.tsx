@@ -32,6 +32,7 @@ import { useSalonSettings, SalonSettings } from "@/hooks/useSalonSettings";
 import { useSubscription } from "@/hooks/useSubscription";
 import { isMissingColumnError, stripPendingColumns } from "@/lib/schemaFallback";
 import { calculateServiceCharge } from "@/lib/utils";
+import { resolveEffectiveMultiplier } from "@/lib/pricing/effectiveMultiplier";
 import { useClients } from "@/hooks/useClients";
 import { useClientDetail } from "@/hooks/useClientDetail";
 import type { FormulaRecord } from "@/hooks/useClients";
@@ -96,9 +97,7 @@ function ChargeSummary({
     );
     if (!selectedService && !hasProduct) return null;
 
-    const backbarMultiplier = (staffMarkup?.has_custom_markup && staffMarkup.custom_markup_percent > 0)
-      ? staffMarkup.custom_markup_percent
-      : (settings.backbar_multiplier ?? 4);
+    const backbarMultiplier = resolveEffectiveMultiplier(staffMarkup, settings.backbar_multiplier);
     const effectiveBowlFee = (staffBowlFee?.has_custom_bowl_fee)
       ? staffBowlFee.custom_bowl_fee
       : (settings.bowl_fee || 0);
@@ -293,9 +292,7 @@ export default function NewBowl() {
   }, [selectedServiceId, services]);
   
   // Determine the effective backbar multiplier for this staff member
-  const effectiveBackbarMultiplier = effectiveStaff?.markup.has_custom_markup 
-    ? effectiveStaff.markup.custom_markup_percent 
-    : (settings?.backbar_multiplier ?? 4);
+  const effectiveBackbarMultiplier = resolveEffectiveMultiplier(effectiveStaff?.markup, settings?.backbar_multiplier);
 
   // Fetch products from database
   const { data: dbProducts } = useQuery({
