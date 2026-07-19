@@ -27,12 +27,12 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    if (!ANTHROPIC_API_KEY) {
+      throw new Error("ANTHROPIC_API_KEY is not configured");
     }
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -59,14 +59,13 @@ serve(async (req) => {
 
     // Check for client-related questions
     const clientNameMatch = questionLower.match(/(?:on|for|about|with)\s+([a-z]+)/i);
-    const mentionsClient = questionLower.includes("client") || 
-                          questionLower.includes("formula") || 
+    const mentionsClient = questionLower.includes("client") ||
+                          questionLower.includes("formula") ||
                           questionLower.includes("last time") ||
                           questionLower.includes("last visit") ||
                           clientNameMatch;
 
     if (mentionsClient || context.selectedClientId) {
-      // Fetch client data with recent sessions
       let clientQuery = supabase
         .from("clients")
         .select(`
@@ -115,14 +114,14 @@ serve(async (req) => {
               dataContext += `\n- **${session.session_date}**`;
               if (session.notes) dataContext += ` (Notes: ${session.notes})`;
               dataContext += "\n";
-              
+
               const bowls = session.session_bowls as any[];
               if (bowls) {
                 for (const bowl of bowls) {
                   dataContext += `  Bowl "${bowl.name}": `;
                   const items = bowl.bowl_items as any[];
                   if (items && items.length > 0) {
-                    const itemStrs = items.map((item: any) => 
+                    const itemStrs = items.map((item: any) =>
                       `${item.amount}${item.unit} ${item.product?.brand || ''} ${item.product?.shade || item.product?.name || 'Unknown'}`
                     );
                     dataContext += itemStrs.join(" + ");
@@ -140,7 +139,7 @@ serve(async (req) => {
     }
 
     // Check for inventory-related questions
-    const mentionsInventory = questionLower.includes("stock") || 
+    const mentionsInventory = questionLower.includes("stock") ||
                              questionLower.includes("inventory") ||
                              questionLower.includes("running low") ||
                              questionLower.includes("out of") ||
@@ -164,29 +163,28 @@ serve(async (req) => {
       if (!productError && products) {
         const lowStock = products.filter((p: any) => p.stock <= p.reorder_level);
         const outOfStock = products.filter((p: any) => p.stock === 0);
-        
+
         dataContext += "\n\n## Inventory Status:\n";
-        
+
         if (outOfStock.length > 0) {
-          dataContext += `\n**⚠️ Out of Stock (${outOfStock.length} products):**\n`;
+          dataContext += `\n**Out of Stock (${outOfStock.length} products):**\n`;
           outOfStock.slice(0, 10).forEach((p: any) => {
             dataContext += `- ${p.brand} ${p.shade || p.name} (${p.type})\n`;
           });
         }
-        
+
         if (lowStock.length > outOfStock.length) {
           const lowNotOut = lowStock.filter((p: any) => p.stock > 0);
-          dataContext += `\n**⚠️ Low Stock (${lowNotOut.length} products):**\n`;
+          dataContext += `\n**Low Stock (${lowNotOut.length} products):**\n`;
           lowNotOut.slice(0, 10).forEach((p: any) => {
             dataContext += `- ${p.brand} ${p.shade || p.name}: ${p.stock} left (reorder at ${p.reorder_level})\n`;
           });
         }
-        
-        // Check for specific product mentions
+
         const productMatch = questionLower.match(/(\d+[a-z]*|\w+\s*\d+)/i);
         if (productMatch) {
           const searchTerm = productMatch[1];
-          const matchingProducts = products.filter((p: any) => 
+          const matchingProducts = products.filter((p: any) =>
             p.shade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             p.name?.toLowerCase().includes(searchTerm.toLowerCase())
           );
@@ -197,7 +195,7 @@ serve(async (req) => {
             });
           }
         }
-        
+
         dataContext += `\n**Total active products:** ${products.length}\n`;
       }
     }
@@ -212,10 +210,9 @@ serve(async (req) => {
                             questionLower.includes("busy");
 
     if (mentionsBusiness) {
-      // Get recent session stats
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      
+
       let sessionQuery = supabase
         .from("color_sessions")
         .select("session_date, total_cost, client_id")
@@ -230,7 +227,7 @@ serve(async (req) => {
       if (!sessionError && recentSessions) {
         const totalCost = recentSessions.reduce((sum: number, s: any) => sum + (s.total_cost || 0), 0);
         const uniqueClients = new Set(recentSessions.map((s: any) => s.client_id)).size;
-        
+
         dataContext += "\n\n## Business Insights (Last 7 Days):\n";
         dataContext += `- Total color sessions: ${recentSessions.length}\n`;
         dataContext += `- Total product cost: $${totalCost.toFixed(2)}\n`;
@@ -270,54 +267,81 @@ ${dataContext ? `## Available Data:\n${dataContext}` : "## Note: No specific dat
 - When discussing formulas, be specific about amounts and products
 - For navigation questions, give step-by-step guidance`;
 
-    // Build conversation messages
-    const conversationMessages = [
-      { role: "system", content: systemPrompt },
+    // Build conversation in Anthropic format (system is top-level, not a message)
+    const anthropicMessages = [
       ...messages.map((m) => ({ role: m.role, content: m.content })),
       { role: "user", content: question },
     ];
 
-    console.log("[Mira Chat] Calling Lovable AI with context length:", dataContext.length);
+    console.log("[Mira Chat] Calling Anthropic API, context length:", dataContext.length);
 
-    // Call Lovable AI Gateway with streaming
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: conversationMessages,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: anthropicMessages,
         stream: true,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[Mira Chat] AI gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
+      console.error("[Mira Chat] Anthropic API error:", response.status, errorText);
       return new Response(
         JSON.stringify({ error: "AI service error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Return streaming response
-    return new Response(response.body, {
+    // Convert Anthropic SSE format → OpenAI SSE format so the client doesn't need to change.
+    // Anthropic: data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"..."}}
+    // OpenAI:    data: {"choices":[{"delta":{"content":"..."}}]}
+    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+    const writer = writable.getWriter();
+    const encoder = new TextEncoder();
+
+    (async () => {
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let nl: number;
+          while ((nl = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, nl).trim();
+            buffer = buffer.slice(nl + 1);
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === "[DONE]") continue;
+            try {
+              const event = JSON.parse(jsonStr);
+              if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
+                const text = event.delta.text as string;
+                const out = JSON.stringify({ choices: [{ delta: { content: text } }] });
+                await writer.write(encoder.encode(`data: ${out}\n\n`));
+              }
+            } catch {
+              // skip malformed events
+            }
+          }
+        }
+      } finally {
+        await writer.write(encoder.encode("data: [DONE]\n\n"));
+        await writer.close();
+      }
+    })();
+
+    return new Response(readable, {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/event-stream",

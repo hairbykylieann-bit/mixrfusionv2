@@ -13,8 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     // Auth
     const authHeader = req.headers.get("Authorization");
@@ -61,19 +61,18 @@ serve(async (req) => {
       .map((p: any) => `${p.brand} | ${p.line || ""} | ${p.name} | shade:${p.shade || "none"} | id:${p.id} | stock:${p.stock}`)
       .join("\n");
 
-    // Call Gemini via Lovable AI gateway with tool calling
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call Claude via Anthropic API with vision + tool use
+    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          {
-            role: "system",
-            content: `You are an inventory receipt parser for a hair salon. You will receive an image or PDF of a product order receipt/invoice. Extract every product line item with its quantity ordered.
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        system: `You are an inventory receipt parser for a hair salon. You will receive an image or PDF of a product order receipt/invoice. Extract every product line item with its quantity ordered.
 
 Then match each extracted item to the salon's existing inventory below. Match by brand + shade code or product name. If unsure, provide your best guess with confidence "low".
 
@@ -81,13 +80,17 @@ EXISTING INVENTORY:
 ${productList}
 
 For each item on the receipt, call the extract_receipt_items tool with ALL items found.`,
-          },
+        messages: [
           {
             role: "user",
             content: [
               {
-                type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${file}` },
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mimeType,
+                  data: file,
+                },
               },
               {
                 type: "text",
@@ -98,96 +101,79 @@ For each item on the receipt, call the extract_receipt_items tool with ALL items
         ],
         tools: [
           {
-            type: "function",
-            function: {
-              name: "extract_receipt_items",
-              description:
-                "Extract and match all product line items from the receipt to existing inventory",
-              parameters: {
-                type: "object",
-                properties: {
+            name: "extract_receipt_items",
+            description: "Extract and match all product line items from the receipt to existing inventory",
+            input_schema: {
+              type: "object",
+              properties: {
+                items: {
+                  type: "array",
                   items: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        receipt_description: {
-                          type: "string",
-                          description: "The product description as shown on the receipt",
-                        },
-                        brand: { type: "string", description: "Extracted brand name" },
-                        product_name: { type: "string", description: "Product name or shade name" },
-                        shade: {
-                          type: "string",
-                          description: "Shade code if applicable (e.g. 7N, 6.1)",
-                        },
-                        quantity: {
-                          type: "number",
-                          description: "Number of units ordered",
-                        },
-                        matched_product_id: {
-                          type: "string",
-                          description: "UUID of the matched product from inventory, or empty string if no match",
-                        },
-                        confidence: {
-                          type: "string",
-                          enum: ["high", "medium", "low"],
-                          description: "Confidence level of the match",
-                        },
+                    type: "object",
+                    properties: {
+                      receipt_description: {
+                        type: "string",
+                        description: "The product description as shown on the receipt",
                       },
-                      required: [
-                        "receipt_description",
-                        "brand",
-                        "product_name",
-                        "quantity",
-                        "matched_product_id",
-                        "confidence",
-                      ],
-                      additionalProperties: false,
+                      brand: { type: "string", description: "Extracted brand name" },
+                      product_name: { type: "string", description: "Product name or shade name" },
+                      shade: {
+                        type: "string",
+                        description: "Shade code if applicable (e.g. 7N, 6.1)",
+                      },
+                      quantity: {
+                        type: "number",
+                        description: "Number of units ordered",
+                      },
+                      matched_product_id: {
+                        type: "string",
+                        description: "UUID of the matched product from inventory, or empty string if no match",
+                      },
+                      confidence: {
+                        type: "string",
+                        enum: ["high", "medium", "low"],
+                        description: "Confidence level of the match",
+                      },
                     },
+                    required: [
+                      "receipt_description",
+                      "brand",
+                      "product_name",
+                      "quantity",
+                      "matched_product_id",
+                      "confidence",
+                    ],
                   },
                 },
-                required: ["items"],
-                additionalProperties: false,
               },
+              required: ["items"],
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "extract_receipt_items" } },
+        tool_choice: { type: "tool", name: "extract_receipt_items" },
       }),
     });
 
     if (!aiResponse.ok) {
       const status = aiResponse.status;
       const body = await aiResponse.text();
-      console.error("AI gateway error:", status, body);
-
-      if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "AI rate limit reached. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI usage limit reached. Please add credits to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      throw new Error(`AI gateway error: ${status}`);
+      console.error("Anthropic API error:", status, body);
+      throw new Error(`AI error: ${status}`);
     }
 
     const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
 
-    if (!toolCall?.function?.arguments) {
+    // Claude returns tool use in content array with type "tool_use"
+    const toolUse = aiData.content?.find((c: any) => c.type === "tool_use");
+
+    if (!toolUse?.input) {
       return new Response(
         JSON.stringify({ error: "AI could not parse the receipt. Try a clearer image." }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const extracted = JSON.parse(toolCall.function.arguments);
+    const extracted = toolUse.input;
     const items = extracted.items || [];
 
     // Enrich matched items with current stock info

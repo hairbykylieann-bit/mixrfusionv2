@@ -26,9 +26,9 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
+      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -67,36 +67,38 @@ Rules:
 
     const userPrompt = `Catalog (JSON):\n${JSON.stringify(catalog)}\n\nUser said: "${transcription}"\n\nReturn the JSON now.`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": LOVABLE_API_KEY,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
       }),
     });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
-      console.error("Lovable AI error:", aiResponse.status, errText);
+      console.error("Anthropic API error:", aiResponse.status, errText);
       return new Response(
-        JSON.stringify({ error: `AI gateway error: ${aiResponse.status}`, detail: errText }),
+        JSON.stringify({ error: `AI error: ${aiResponse.status}`, detail: errText }),
         { status: aiResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const aiData = await aiResponse.json();
-    const raw = aiData.choices?.[0]?.message?.content ?? "{}";
+    const raw = aiData.content?.[0]?.text ?? "{}";
     let parsed: { updates?: unknown; unmatched?: unknown };
     try {
-      parsed = JSON.parse(raw);
+      // Strip markdown code fences if present
+      let clean = raw.trim();
+      if (clean.startsWith("```")) clean = clean.replace(/^```(?:json)?\n?/, "").replace(/```$/, "").trim();
+      parsed = JSON.parse(clean);
     } catch {
       parsed = {};
     }

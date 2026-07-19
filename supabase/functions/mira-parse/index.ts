@@ -35,17 +35,17 @@ const spokenToDigit: Record<string, string> = {
 
 function normalizeTranscription(text: string): string {
   let normalized = text.toLowerCase();
-  
+
   for (const [word, digit] of Object.entries(spokenToDigit)) {
     normalized = normalized.replace(new RegExp(`\\b${word}\\b`, 'gi'), digit);
   }
-  
+
   // Handle common patterns like "6 n" -> "6N"
   normalized = normalized.replace(/(\d+)\s*([a-zA-Z])\b/g, '$1$2');
-  
+
   // Handle "volume" patterns
   normalized = normalized.replace(/(\d+)\s*(?:volume|vol)\b/gi, '$1 vol');
-  
+
   return normalized;
 }
 
@@ -55,12 +55,12 @@ serve(async (req) => {
   }
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+
+    if (!ANTHROPIC_API_KEY) {
+      console.error("ANTHROPIC_API_KEY not configured");
       return new Response(
-        JSON.stringify({ error: "Lovable API key not configured" }),
+        JSON.stringify({ error: "Anthropic API key not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -95,7 +95,7 @@ serve(async (req) => {
 TRANSCRIPTION ERROR CORRECTION:
 Speech-to-text often mishears hair color terminology. Apply these corrections:
 - "six end", "six in", "6 end" → "6N" (shade code)
-- "seven a", "seventy" → "7A" (shade code)  
+- "seven a", "seventy" → "7A" (shade code)
 - "eight g", "eighty" → "8G" (shade code)
 - "five rv", "five are vee" → "5RV" (shade code)
 - "ten volume", "ten vol" → "10 vol" (developer)
@@ -150,18 +150,20 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
   "confidence": 0.0-1.0
 }`;
 
-    console.log("Calling Lovable AI Gateway...");
+    console.log("Calling Anthropic API...");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        system: systemPrompt,
         messages: [
-          { role: "system", content: systemPrompt },
           { role: "user", content: `Parse this spoken color mix instruction: "${normalizedTranscription}"\n\nOriginal speech: "${transcription}"` },
         ],
         temperature: 0.1,
@@ -170,34 +172,20 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Lovable AI Gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
+      console.error("Anthropic API error:", response.status, errorText);
       return new Response(
         JSON.stringify({ error: `AI parsing failed: ${response.status}` }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const aiResponse = await response.json();
+    const aiData = await response.json();
     console.log("AI Response received");
-    
-    const content = aiResponse.choices?.[0]?.message?.content;
+
+    const content = aiData.content?.[0]?.text;
 
     if (!content) {
-      console.error("No content in AI response:", aiResponse);
+      console.error("No content in AI response:", aiData);
       return new Response(
         JSON.stringify({ error: "No response from AI" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -206,7 +194,7 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
 
     console.log("AI content:", content);
 
-    // Parse the JSON response - handle potential markdown wrapping
+    // Parse the JSON response — strip markdown fences if present
     let parsed: Record<string, unknown>;
     try {
       let cleanContent = content.trim();
@@ -219,7 +207,7 @@ Respond ONLY with valid JSON (no markdown, no code blocks):
         cleanContent = cleanContent.slice(0, -3);
       }
       cleanContent = cleanContent.trim();
-      
+
       parsed = JSON.parse(cleanContent);
     } catch (e) {
       console.error("Failed to parse AI response:", e, "Content:", content);
