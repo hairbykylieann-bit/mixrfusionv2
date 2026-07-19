@@ -246,7 +246,7 @@ export function calculateSessionRevenueV2(
 // ─── Period aggregation ────────────────────────────────────────────────────
 
 export interface PeriodInputs {
-  sessions: Array<{ id: string; service_id: string | null; total_amount_mixed: number | null; total_amount_used: number | null }>;
+  sessions: Array<{ id: string; service_id: string | null; total_amount_mixed: number | null; total_amount_used: number | null; charged_amount?: number | null }>;
   bowls: EngineBowlInput[];
   items: EngineItemInput[];
   serviceMap: Map<string, ServiceMenuItem>;
@@ -306,6 +306,13 @@ export function calculatePeriodTotals({ sessions, bowls, items, serviceMap, sett
       serviceMap,
       settings,
     );
+
+    // If the stylist's quoted charge was persisted at save time, use it as the
+    // gross revenue so reports always match what the client was charged.
+    if (session.charged_amount != null) {
+      rev.grossRevenue = Number(session.charged_amount);
+    }
+
     perSession.set(session.id, rev);
 
     totalRevenue += rev.grossRevenue;

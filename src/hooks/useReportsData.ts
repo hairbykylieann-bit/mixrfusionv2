@@ -194,6 +194,7 @@ export function useReportsData(dateRange: DateRange | null) {
             total_cost,
             total_amount_mixed,
             total_amount_used,
+            charged_amount,
             stylist_id,
             service_id,
             staff:stylist_id (
@@ -231,7 +232,7 @@ export function useReportsData(dateRange: DateRange | null) {
       const sessions = await fetchAllRows<any>((from, to) =>
         supabase
           .from('color_sessions')
-          .select('id, service_id, total_amount_mixed, total_amount_used')
+          .select('id, service_id, total_amount_mixed, total_amount_used, charged_amount')
           .gte('session_date', prevFromDate)
           .lte('session_date', prevToDate)
           .gt('total_amount_mixed', 0)

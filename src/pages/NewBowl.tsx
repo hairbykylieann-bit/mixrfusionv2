@@ -69,6 +69,7 @@ function ChargeSummary({
   selectedService,
   staffMarkup,
   staffBowlFee,
+  onTotal,
 }: {
   bowls: Bowl[];
   colorProducts: Product[];
@@ -77,6 +78,7 @@ function ChargeSummary({
   selectedService: ServiceMenuItem | null;
   staffMarkup?: { has_custom_markup: boolean; custom_markup_percent: number } | null;
   staffBowlFee?: { has_custom_bowl_fee: boolean; custom_bowl_fee: number } | null;
+  onTotal?: (total: number | null) => void;
 }) {
   const summary = useMemo(() => {
     if (!settings) return null;
@@ -180,6 +182,10 @@ function ChargeSummary({
 
     return { type: 'no-service' as const, productCharge, backbarMultiplier, bowlFeeTotal, bowlCount: bowls.length, perBowlFee: effectiveBowlFee, total };
   }, [bowls, colorProducts, developerProducts, settings, selectedService, staffMarkup, staffBowlFee]);
+
+  useEffect(() => {
+    onTotal?.(summary?.total ?? null);
+  }, [summary, onTotal]);
 
   if (!summary) return null;
 
@@ -372,6 +378,7 @@ export default function NewBowl() {
   }, [colorProducts, developerDefaultsMap]);
 
   const hasPopulatedFormula = useRef(false);
+  const chargedAmountRef = useRef<number | null>(null);
 
   // Handle pre-filled data from client page
   useEffect(() => {
@@ -1507,6 +1514,9 @@ export default function NewBowl() {
             total_amount_mixed: totalMixed,
             total_amount_used: totalUsed,
             total_cost: 0,
+            charged_amount: chargedAmountRef.current != null
+              ? Math.round(chargedAmountRef.current * 100) / 100
+              : null,
             notes: sessionCanvas?.notes?.trim() || null, // ONE notes home: the head sheet
             tenant_id: tenantId,
             service_id: selectedService?.id || null,
@@ -1689,10 +1699,13 @@ export default function NewBowl() {
 
         await supabase
           .from('color_sessions')
-          .update({ 
+          .update({
             total_amount_mixed: totalMixed,
             total_amount_used: totalUsed,
             total_cost: Math.round(totalSessionCost * 100) / 100,
+            charged_amount: chargedAmountRef.current != null
+              ? Math.round(chargedAmountRef.current * 100) / 100
+              : null,
             notes: sessionCanvas?.notes?.trim() || null, // ONE notes home: the head sheet
             canvas_data: sessionCanvas as any,
             canvas_preview_url: sessionCanvasPreviewUrl,
@@ -1703,6 +1716,9 @@ export default function NewBowl() {
           .from('color_sessions')
           .update({
             total_cost: Math.round(totalSessionCost * 100) / 100,
+            charged_amount: chargedAmountRef.current != null
+              ? Math.round(chargedAmountRef.current * 100) / 100
+              : null,
             canvas_data: sessionCanvas as any,
             canvas_preview_url: sessionCanvasPreviewUrl,
           } as any)
@@ -2153,6 +2169,7 @@ export default function NewBowl() {
                                   selectedService={selectedService}
                                   staffMarkup={effectiveStaff?.markup}
                                   staffBowlFee={effectiveStaff?.bowlFee}
+                                  onTotal={(t) => { chargedAmountRef.current = t; }}
                                 />
                               </div>
                             </section>
